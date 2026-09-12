@@ -7,89 +7,94 @@ into the expected folder structure.
 Usage:
     python data/download_dataset.py
 
-Requires: pip install datasets huggingface-hub
+Requires: pip install huggingface-hub pillow tqdm
 """
 
 import sys
 import json
+import zipfile
 import shutil
+import concurrent.futures
 from pathlib import Path
 from collections import defaultdict
-
-from tqdm import tqdm
-from PIL import Image
+import os
 
 # Allow running from project root
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-
 RAW_DIR = ROOT / "data" / "raw" / "plantvillage"
 STATS_FILE = ROOT / "data" / "dataset_stats.json"
-
 HF_DATASET_ID = "mohanty/PlantVillage"
 
+def extract_file(zip_path, member, extract_path):
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        with zf.open(member) as src:
+            with open(extract_path, 'wb') as dst:
+                shutil.copyfileobj(src, dst)
 
 def download_plantvillage():
     print(f"📥 Downloading PlantVillage from Hugging Face: {HF_DATASET_ID}")
-    print("   This may take several minutes on first run...\n")
-
     try:
-        from datasets import load_dataset
+        from huggingface_hub import hf_hub_download
     except ImportError:
-        print("❌ Missing: pip install datasets huggingface-hub")
+        print("❌ Missing: pip install huggingface-hub")
         sys.exit(1)
 
-    dataset = load_dataset(HF_DATASET_ID, trust_remote_code=True)
-    print(f"✅ Dataset loaded. Splits: {list(dataset.keys())}")
+    print("Downloading data.zip (approx 2GB) if not cached...")
+    zip_path = hf_hub_download(repo_id=HF_DATASET_ID, filename="data.zip", repo_type="dataset")
+    print(f"✅ Downloaded/Found at: {zip_path}")
 
-    # Use 'train' split (PlantVillage on HF uses 'train')
-    split = "train"
-    data = dataset[split]
-    print(f"   Total samples: {len(data)}")
-
-    # Inspect columns
-    print(f"   Columns: {data.column_names}")
-
-    # Save images to disk
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     class_counts = defaultdict(int)
     corrupted = []
 
-    print(f"\n💾 Saving images to {RAW_DIR} ...")
-    for idx, sample in enumerate(tqdm(data, desc="Saving")):
-        # Hugging Face PlantVillage: sample has 'image' (PIL) and 'label' (int or str)
-        image = sample.get("image") or sample.get("img")
-        label = sample.get("label")
-
-        if image is None or label is None:
-            continue
-
-        # Get class name
-        if hasattr(data.features["label"], "names"):
-            class_name = data.features["label"].names[label]
-        else:
-            class_name = str(label)
-
-        # Create class directory
-        class_dir = RAW_DIR / class_name
-        class_dir.mkdir(exist_ok=True)
-
-        # Save image
-        img_path = class_dir / f"{idx:06d}.jpg"
-        try:
+    print(f"\n💾 Extracting RGB images to {RAW_DIR} ...")
+    with zipfile.ZipFile(zip_path, 'r') as zf:
+        color_files = [f for f in zf.namelist() if f.startswith('raw/color/') and not f.endswith('/')]
+    
+    tasks = []
+    
+    # Pre-create all directories
+    for f in color_files:
+        parts = f.split('/')
+        if len(parts) >= 4:
+            class_dir = RAW_DIR / parts[2]
+            class_dir.mkdir(exist_ok=True, parents=True)
+    
+    print(f"Starting parallel extraction of {len(color_files)} files...")
+    
+    import time
+    start_time = time.time()
+    
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() * 4) as executor:
+        for file_path in color_files:
+            parts = file_path.split('/')
+            if len(parts) < 4:
+                continue
+            class_name = parts[2]
+            file_name = parts[-1]
+            img_path = RAW_DIR / class_name / file_name
+            
             if not img_path.exists():
-                if isinstance(image, Image.Image):
-                    image.convert("RGB").save(img_path, "JPEG", quality=95)
-                else:
-                    # bytes
-                    with open(img_path, "wb") as f:
-                        f.write(image)
-            class_counts[class_name] += 1
-        except Exception as e:
-            corrupted.append({"idx": idx, "class": class_name, "error": str(e)})
+                tasks.append(
+                    (executor.submit(extract_file, zip_path, file_path, img_path), class_name, file_path)
+                )
+            else:
+                class_counts[class_name] += 1
+                
+        for i, (future, class_name, file_path) in enumerate(tasks):
+            try:
+                future.result()
+                class_counts[class_name] += 1
+            except Exception as e:
+                corrupted.append({"file": file_path, "class": class_name, "error": str(e)})
+            
+            if (i + 1) % 5000 == 0:
+                print(f"Extracted {i + 1}/{len(tasks)} files...")
 
-    # Save stats
+    print(f"Extraction took {time.time() - start_time:.1f} seconds")
+
     stats = {
         "source": HF_DATASET_ID,
         "total_images": sum(class_counts.values()),
@@ -101,18 +106,13 @@ def download_plantvillage():
     with open(STATS_FILE, "w") as f:
         json.dump(stats, f, indent=2)
 
-    # Print summary
     print(f"\n{'='*55}")
-    print(f"  ✅ Download complete!")
+    print(f"  ✅ Extraction complete!")
     print(f"  Total images:  {stats['total_images']:,}")
     print(f"  Total classes: {stats['total_classes']}")
     print(f"  Corrupted:     {len(corrupted)}")
     print(f"  Saved to:      {RAW_DIR}")
-    print(f"  Stats:         {STATS_FILE}")
     print(f"{'='*55}")
-    print("\nPer-class counts:")
-    for cls, count in sorted(class_counts.items(), key=lambda x: x[0]):
-        print(f"  {cls:<50} {count:>5} images")
 
     return stats
 
