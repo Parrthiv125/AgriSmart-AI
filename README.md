@@ -1,307 +1,164 @@
 # 🌿 AgriSmart AI
 
-> **AI-powered crop disease detection and farm intelligence system**  
-> Built for the AI/ML Hackathon · September 2026
+> **AI-Powered Crop Disease Detection & Farm Intelligence System**  
+> Built for Smart India Hackathon (SIH) / AI/ML Hackathon · 2026
 
 ---
 
-## 🎯 Problem Statement
+## 🎯 Problem Statement & Capability
 
-Crop diseases cause billions of dollars in agricultural losses annually. Smallholder farmers often lack timely access to expert diagnosis. AgriSmart AI provides instant, accurate crop disease detection from a single leaf photograph — turning visual diagnosis into actionable farm decisions.
+Crop diseases cause severe agricultural yield losses globally, threatening smallholder farmer livelihoods and food security. Early visual identification is critical to preventing widespread crop failure, yet farmers often lack access to timely expert diagnosis. 
 
----
-
-## 🏆 Project Objective
-
-Build a reliable, reproducible AI system that:
-1. **Identifies crop diseases** from leaf/crop images with high Macro-F1
-2. **Generalises** from clean lab images (PlantVillage) to real-world field photographs
-3. **Provides actionable guidance** — confidence score + precautionary advice
-4. **Integrates** into a usable web interface for farmers
+**AgriSmart AI** provides fast, automated visual crop disease diagnosis directly from leaf images. By identifying specific disease symptoms and calculating prediction confidence, AgriSmart AI delivers immediate precautionary guidance to help farmers protect crop health and take targeted field action.
 
 ---
 
-## ✅ Core Features (Mandatory)
+## 🚦 Current Project Status
 
-| Feature | Status |
-|---|---|
-| Disease classification from leaf image | 🔄 In Progress |
-| Confidence score (High / Medium / Low) | 🔄 In Progress |
-| Precautionary guidance | 🔄 In Progress |
-| FastAPI backend (`POST /predict`) | 🔄 In Progress |
-| Responsive web frontend | 🔄 In Progress |
-| Macro-F1 evaluation | 🔄 In Progress |
-| Confusion matrix + per-class metrics | 🔄 In Progress |
-| Robustness testing | 🔄 In Progress |
-| Grad-CAM explainability | 🔄 In Progress |
-| Reproducible inference (`predict.py`) | 🔄 In Progress |
+| Phase | Capability / Module | Status | Details / Deliverables |
+|---|---|---|---|
+| **Phase 1** | Dataset Setup & 38→28 Class Mapping | ✅ Completed | 38,542 mapped images, 0 corrupt |
+| **Phase 1** | Leakage-Safe Leaf-Group Splitting | ✅ Completed | 80/10/10 split, 0 physical leaf leakage |
+| **Phase 2** | Model Architecture & Augmentation | ✅ Completed | EfficientNet-B2 (`timm`), 260x260 input |
+| **Phase 2** | GPU Model Training & Fine-Tuning | ✅ Completed | 2-stage training on Colab GPU (Best Epoch 23) |
+| **Phase 2** | Evaluation & Held-Out Testing | ✅ Completed | **0.9961 Test Macro-F1** across 3,835 test images |
+| **Phase 3** | Local Model Integration & Verification | ✅ Completed | Weights & class JSON integrated (`models/verify_model.py`) |
+| **Phase 4** | Inference Engine CLI & Python API | ✅ Completed | `inference/predict.py` with precaution lookup |
+| **Phase 5** | FastAPI REST Server (`POST /predict`) | 🔄 Next Phase | Planned REST API server |
+| **Phase 6** | Interactive Web Frontend | 🔄 Next Phase | Planned web user interface |
 
-## 🌟 Bonus Features (Optional — after core is complete)
-
-| Module | Status |
-|---|---|
-| Smart Irrigation | ⬜ Planned |
-| Weather Intelligence | ⬜ Planned |
-| Farmer Assistant (LLM) | ⬜ Planned |
-| Sustainability Score | ⬜ Planned |
-| Crop Recommendation | ⬜ Planned |
-| Simulated IoT | ⬜ Planned |
-| Agentic Advisor | ⬜ Planned |
+*Note: Core ML dataset preparation, model training, evaluation, and local model integration are 100% completed and verified. REST API backend and Web Frontend modules are scheduled for the next development phase.*
 
 ---
 
-## 🏗️ Architecture
+## 📊 Dataset & 28 Development Classes
 
-```
-Leaf Image
-    ↓
-Preprocessing (resize, normalize)
-    ↓
-EfficientNet-B2 (Transfer Learning)
-    ↓
-Disease Class + Confidence
-    ↓
-Grad-CAM Heatmap (optional)
-    ↓
-Precautionary Guidance
-    ↓
-FastAPI Backend
-    ↓
-Web Frontend
-```
+- **Primary Dataset:** PlantVillage on Hugging Face ([`mohanty/PlantVillage`](https://huggingface.co/datasets/mohanty/PlantVillage))
+- **License:** CC0 / Public Domain
+- **Citation:** Hughes, D. P., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics*. arXiv:1511.08060.
+- **Mapped Dataset Size:** 38,542 images across 28 official development classes (filtered from 38 original raw PlantVillage class folders without data loss or silent class merging).
+
+### Leakage-Safe Leaf-Group Split Methodology
+To prevent severe data leakage caused by multi-view photos of the same physical leaf appearing in both training and test sets, split logic is performed strictly at the **leaf group** (`leaf_id`) level using fixed random seeds (`SEED=42`).
+
+- **Train Split (80.02%)**: 30,841 images
+- **Validation Split (10.03%)**: 3,866 images
+- **Held-Out Test Split (9.95%)**: 3,835 images
+- **Leakage Verification**: `0` file-level overlap, `0` leaf-group overlap across splits.
 
 ---
 
-## 📂 Repository Structure
+## 🧠 Model Architecture & Training
 
-```
+- **Backbone Architecture**: `EfficientNet-B2` (pretrained on ImageNet via `timm`)
+- **Input Resolution**: `260 x 260` RGB pixels
+- **Training Strategy**: 2-stage transfer learning (3 warmup epochs freezing backbone, followed by full fine-tuning with Cosine Annealing LR scheduler and AdamW optimizer)
+- **Data Augmentation**: Training-time field sensor degradation (JPEG compression artifact simulation, random crop/scaling, rotation, color jitter, Gaussian noise, and occlusion erasing). Validation/Test uses clean resize and ImageNet normalization.
+
+---
+
+## 📈 Evaluation & Results
+
+Evaluated on the held-out 3,835-image PlantVillage test set:
+
+| Evaluation Metric | Validation Set | Held-Out Test Set | Target / Requirement | Status |
+|---|---|---|---|---|
+| **Macro-F1 Score** | **0.9979** | **0.9961** | High Macro-F1 | ✅ Passed |
+| **Accuracy** | **0.9979** (99.79%) | **0.9971** (99.71%) | > 95.0% | ✅ Passed |
+| **Evaluated Images** | 3,866 | 3,835 | — | ✅ Complete |
+| **Best Checkpoint** | Epoch 23 | Epoch 23 | — | ✅ Saved |
+
+> ⚠️ **Important Evaluation Note:**  
+> The **99.61% Test Macro-F1** score was evaluated on the held-out **PlantVillage test set**. This demonstrates exceptional in-domain accuracy on controlled laboratory leaf images, but must **NOT** be described as real-world field-condition accuracy. Complex field conditions (variable lighting, shadows, soil background clutter, multiple leaves) present distinct generalization challenges addressed separately via robustness augmentations and field testing.
+
+---
+
+## 📂 Repository Structure & Key Model Files
+
+```text
 AgriSmart-AI/
-├── README.md
-├── requirements.txt
-├── .gitignore
+├── README.md                           ← Main project documentation
+├── requirements.txt                    ← Environment dependencies
+├── AgriSmart_AI_Training_Colab.ipynb   ← Self-contained Colab training notebook
 │
-├── data/
-│   └── README.md               ← Dataset download + prep instructions
+├── models/                             ← Integrated Model Artifacts
+│   ├── README.md                       ← Model weights documentation
+│   ├── agrismart_best.pth              ← Trained EfficientNet-B2 PyTorch weights (Epoch 23, 93.6 MB)
+│   ├── classes.json                    ← 28-class index mapping
+│   └── verify_model.py                 ← Model loading & forward-pass verification script
 │
-├── training/
-│   ├── config.py               ← All hyperparameters & paths
-│   ├── dataset.py              ← Dataset loading, splitting
-│   ├── preprocessing.py        ← Transforms & augmentation
-│   └── train.py                ← Training loop
+├── data/                               ← Dataset Pipeline
+│   ├── README.md                       ← Dataset download & split documentation
+│   ├── class_mapping.csv               ← 38 -> 28 class translation table
+│   ├── validate_mapping.py             ← Class mapping validator
+│   ├── split_dataset.py                ← Leaf-group isolated 80/10/10 splitter
+│   └── sanity_check_dataloaders.py     ← DataLoader verification script
 │
-├── evaluation/
-│   ├── evaluate.py             ← Full evaluation pipeline
-│   ├── metrics.py              ← Macro-F1, confusion matrix, etc.
-│   ├── robustness.py           ← Robustness testing
-│   └── results/                ← Saved plots & CSVs (git-tracked if small)
+├── training/                           ← Training Modules
+│   ├── config.py                       ← Hyperparameters & paths configuration
+│   ├── dataset.py                      ← Custom PyTorch Dataset classes
+│   ├── preprocessing.py                ← Augmentation & transform pipelines
+│   └── train.py                        ← Local training execution script
 │
-├── inference/
-│   └── predict.py              ← CLI + importable predict() function
-│
-├── models/
-│   └── README.md               ← How to obtain trained weights
-│
-├── backend/
-│   ├── main.py                 ← FastAPI app
-│   ├── routes/
-│   └── schemas.py
-│
-├── frontend/
-│   └── ...                     ← React / plain HTML web app
-│
-├── modules/
-│   ├── weather/
-│   ├── irrigation/
-│   ├── crop_recommendation/
-│   ├── sustainability/
-│   ├── assistant/
-│   └── agent/
-│
-├── tests/
-│
-└── docs/
-    ├── architecture.md
-    ├── dataset.md
-    ├── model.md
-    └── evaluation.md
+└── inference/                          ← Inference Engine
+    └── predict.py                      ← CLI & Python API for disease prediction
 ```
 
 ---
 
-## 📊 Dataset
+## ⚙️ Setup & Verification Instructions
 
-**Primary Dataset:** [PlantVillage on Hugging Face](https://huggingface.co/datasets/mohanty/PlantVillage)  
-**Size:** ~54,306 images  
-**License:** CC0 / Public Domain
-
-> ⚠️ The dataset is **NOT** committed to this repository. See [`data/README.md`](data/README.md) for download and preparation instructions.
-
-The model is trained on PlantVillage (clean/lab images) and evaluated for generalisation to real-world field conditions (PlantDoc-style imagery).
-
----
-
-## ⚙️ Setup & Installation
-
-### 1. Clone the repository
+### 1. Clone & Setup Environment
 ```bash
-git clone https://github.com/YOUR_ORG/AgriSmart-AI.git
+git clone https://github.com/Parrthiv125/AgriSmart-AI.git
 cd AgriSmart-AI
-```
-
-### 2. Create Python environment
-```bash
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-```
 
-### 3. Install dependencies
-```bash
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 4. Prepare the dataset
+### 2. Run Reproducible Model Verification
+Verify that the integrated EfficientNet-B2 model loads state weights and class mappings correctly:
 ```bash
-# See data/README.md for full instructions
-python data/download_dataset.py
+python models/verify_model.py
 ```
 
----
-
-## 🧠 Training
-
+### 3. Run Disease Prediction (CLI)
+Predict crop disease class and view precautionary guidance for any leaf image:
 ```bash
-cd training
-python train.py --config config.py
+python inference/predict.py --image path/to/leaf_photo.jpg
 ```
 
-Key hyperparameters are in [`training/config.py`](training/config.py).  
-All experiment runs are logged to `experiments.csv`.
-
----
-
-## 📈 Evaluation
-
-```bash
-cd evaluation
-python evaluate.py --model_path models/agrismart_best.pth
-```
-
-Outputs:
-- Macro-F1 score
-- Confusion matrix (saved to `evaluation/results/`)
-- Per-class precision, recall, F1
-- Robustness table
-
-### Results
-
-> *(Updated after training is complete)*
-
-| Metric | Value |
-|---|---|
-| Validation Accuracy | TBD |
-| Validation Macro-F1 | TBD |
-| Robustness (Blur) Macro-F1 | TBD |
-| Robustness (Brightness) Macro-F1 | TBD |
-
----
-
-## 🔍 Inference
-
-### Python API
+### 4. Run Disease Prediction (Python API)
 ```python
 from inference.predict import predict
 
-result = predict("path/to/leaf.jpg")
-print(result)
-# {
-#   "class": "Tomato Early Blight",
-#   "confidence": 0.914,
-#   "confidence_level": "High",
-#   "precaution": "..."
-# }
-```
-
-### Command Line
-```bash
-python inference/predict.py --image path/to/leaf.jpg
+result = predict("path/to/leaf_photo.jpg")
+print("Predicted Class:", result["class"])
+print("Confidence:", result["confidence"])
+print("Precaution:", result["precaution"])
 ```
 
 ---
 
-## 🚀 Backend
+## ⚠️ Limitations & Field Generalization
 
-```bash
-cd backend
-uvicorn main:app --reload --port 8000
-```
-
-**Endpoints:**
-- `GET /health` — Health check
-- `POST /predict` — Upload image, get disease prediction
-- `POST /explain` — Get Grad-CAM heatmap
-
-API documentation: `http://localhost:8000/docs`
+1. **Lab vs Field Domain Gap**: PlantVillage images feature isolated leaves against clean, uniform backgrounds. Real-world field performance may vary due to outdoor lighting, shadows, weed backgrounds, and multi-leaf clutter.
+2. **Diagnostic Disclaimer**: AgriSmart AI provides automated screening and precautionary guidance. It is intended to assist farmers and extension workers, not replace qualified agronomists.
+3. **Low-Confidence Handling**: Predictions with confidence below thresholds trigger a low-confidence warning advising the user to provide a clearer, better-lit leaf photo.
 
 ---
 
-## 🌐 Frontend
+## 📜 License & Citation
 
-```bash
-cd frontend
-# (see frontend/README.md for framework-specific instructions)
-```
+- **License**: MIT License
+- **PlantVillage Dataset**: CC0 Public Domain ([Hughes & Salathé, 2015](https://huggingface.co/datasets/mohanty/PlantVillage))
 
 ---
 
-## 🏅 Model
-
-**Architecture:** EfficientNet-B2 (pretrained on ImageNet, fine-tuned on PlantVillage)  
-**Input size:** 260×260  
-**Classes:** *(Official class list from hackathon organizers — see `models/classes.json`)*
-
-Model weights are available at: *(link to be added after training)*
-
----
-
-## 🧪 Testing
-
-```bash
-pytest tests/ -v
-```
-
----
-
-## ⚠️ Limitations
-
-- Trained primarily on lab-condition PlantVillage images; field generalisation is a known challenge addressed via robustness experiments
-- Not a substitute for agronomist professional advice
-- Confidence thresholds should be used; low-confidence predictions require clearer images
-
----
-
-## 📚 Documentation
-
-See the [`docs/`](docs/) folder for detailed documentation:
-- [`docs/architecture.md`](docs/architecture.md) — System architecture
-- [`docs/dataset.md`](docs/dataset.md) — Dataset details
-- [`docs/model.md`](docs/model.md) — Model architecture & training
-- [`docs/evaluation.md`](docs/evaluation.md) — Evaluation methodology
-
----
-
-## 👥 Team
-
-AgriSmart AI Hackathon Team — 2026
-
----
-
-## 📜 License
-
-MIT License — See `LICENSE` file.
-
----
-
-*"AgriSmart AI turns crop-image diagnosis into an actionable agricultural decision."*
+*"AgriSmart AI turns visual crop diagnosis into actionable agricultural decisions."*

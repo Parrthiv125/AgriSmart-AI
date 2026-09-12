@@ -1,76 +1,71 @@
-# Model Weights
+# Model Weights & Integration Suite
 
-## Production Model
+## Integrated Production Checkpoint
 
-**File:** `agrismart_best.pth`  
-**Architecture:** EfficientNet-B2 (timm)  
-**Status:** *(To be trained — see training instructions)*
+- **Model Checkpoint:** `models/agrismart_best.pth` (93.6 MB)
+- **Class Mapping:** `models/classes.json`
+- **Verification Script:** `models/verify_model.py`
+- **Architecture:** EfficientNet-B2 (`timm`)
+- **Number of Classes:** 28 canonical development classes
+- **Input Resolution:** 260 x 260 RGB pixels
+- **Best Epoch:** Epoch 23
+- **Validation Macro-F1:** 0.9979
+- **Validation Accuracy:** 0.9979
+- **Held-Out Test Macro-F1:** 0.9961
+- **Held-Out Test Accuracy:** 0.9971
+- **Integration Commit:** `a777dfa`
 
 ---
 
-## How to Obtain Model Weights
+## Model Verification
 
-### Option 1: Train from scratch (recommended for reproducibility)
+To verify that the checkpoint weights and class mapping load correctly in PyTorch and timm:
+
 ```bash
-# 1. Prepare dataset
-python data/download_dataset.py
-python data/split_dataset.py
-
-# 2. Train
-python training/train.py
-
-# Weights saved automatically to: models/agrismart_best.pth
+python models/verify_model.py
 ```
 
-### Option 2: Download pre-trained weights
-*(Link to be added after training and GitHub Release)*
+This verification script performs:
+1. File presence and size checks for `agrismart_best.pth` and `classes.json`.
+2. Checkpoint metadata inspection (architecture, classes, epoch, image size, validation metrics).
+3. 1-to-1 class index alignment verification between `classes.json` and checkpoint `class_names`.
+4. PyTorch / `timm` model instantiation and `state_dict` loading.
+5. Dummy input forward pass (`[1, 3, 260, 260]` tensor $\rightarrow$ `[1, 28]` output tensor).
 
 ---
 
-## Model Checkpoint Contents
+## Checkpoint Structure
 
-Each `.pth` checkpoint contains:
+Each `.pth` checkpoint saved by the AgriSmart AI training pipeline contains:
 
 ```python
 {
-    "epoch": int,               # epoch at which this checkpoint was saved
-    "model_name": str,          # timm model name (e.g. "efficientnet_b2")
-    "num_classes": int,         # number of disease classes
-    "class_names": List[str],   # ordered class name list
-    "image_size": int,          # expected input image size
-    "state_dict": dict,         # model weights
-    "optimizer_state": dict,    # optimizer state (for resuming training)
-    "val_macro_f1": float,      # validation Macro-F1 at this checkpoint
-    "val_accuracy": float,      # validation accuracy at this checkpoint
+    "epoch": 23,                        # epoch at which best val Macro-F1 was achieved
+    "model_name": "efficientnet_b2",    # timm model architecture name
+    "num_classes": 28,                  # number of development classes
+    "class_names": [...],               # ordered canonical class name list
+    "image_size": 260,                  # expected input image resolution
+    "state_dict": dict,                 # trained model parameter weights
+    "optimizer_state": dict,            # optimizer state
+    "val_macro_f1": 0.997947,           # validation Macro-F1 score
+    "val_accuracy": 0.997931,           # validation accuracy
 }
 ```
 
 ---
 
-## Class Mapping
+## Class Mapping (`models/classes.json`)
 
-`models/classes.json` contains the class index → name mapping:
+`models/classes.json` maps model output class indices (`"0"` through `"27"`) to canonical development class names:
 
 ```json
 {
-  "0": "Apple___Apple_scab",
-  "1": "Apple___Black_rot",
+  "0": "Apple — Apple Scab",
+  "1": "Apple — Cedar Apple Rust",
+  "2": "Apple — Healthy",
   ...
+  "27": "Tomato — Healthy"
 }
 ```
 
-This file is generated automatically during training and **must match** the weights file.
-
-> ⚠️ Do NOT manually edit `classes.json`. Always regenerate it together with new weights.
-
----
-
-## File Structure
-
-```
-models/
-├── README.md               ← This file
-├── agrismart_best.pth      ← Best model (by val Macro-F1) — NOT in git
-├── agrismart_last.pth      ← Last checkpoint — NOT in git
-└── classes.json            ← Class mapping — tracked in git once training is done
-```
+> ⚠️ Do NOT manually edit `classes.json`. It must remain synchronized with the checkpoint `class_names`.
