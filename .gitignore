@@ -35,6 +35,8 @@ venv.bak/
 # Jupyter
 .ipynb_checkpoints
 *.ipynb
+# Allow the Colab training notebook specifically
+!AgriSmart_AI_Training_Colab.ipynb
 
 # PyTorch / Model files
 *.pth
