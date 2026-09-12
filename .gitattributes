@@ -1,0 +1,34 @@
+# Normalize line endings: always store LF in the repo
+# Windows checkouts will use CRLF, all other platforms use LF
+
+* text=auto
+
+# Force LF for Python files
+*.py text eol=lf
+
+# Force LF for shell scripts
+*.sh text eol=lf
+
+# Force LF for markdown and config
+*.md text eol=lf
+*.txt text eol=lf
+*.json text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+*.cfg text eol=lf
+*.ini text eol=lf
+*.env text eol=lf
+
+# Binary files — do not touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pth binary
+*.pt binary
+*.ckpt binary
+*.h5 binary
+*.pkl binary
+*.zip binary
+*.tar binary
+*.gz binary
