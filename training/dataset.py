@@ -13,7 +13,7 @@ import json
 import shutil
 import random
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Set
 
 import torch
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -33,22 +33,38 @@ from training.preprocessing import get_train_transform, get_val_transform
 
 # ── Dataset Loading ──────────────────────────────────────────────────────────
 
+def _match_class(folder_name: str, allowed_set: Set[str]) -> Optional[str]:
+    """Match disk folder name to official development class string."""
+    if folder_name in allowed_set:
+        return folder_name
+    # Check slash sanitization matching
+    for allowed in allowed_set:
+        if allowed.replace("/", "_") == folder_name:
+            return allowed
+    return None
+
 def _filter_classes(dataset: ImageFolder, allowed_classes: Optional[List[str]]) -> ImageFolder:
     """Filter an ImageFolder to only include `allowed_classes`."""
     if allowed_classes is None:
-        return dataset  # use all classes
+        return dataset
 
     allowed_set = set(allowed_classes)
-    class_to_idx = {c: i for i, c in enumerate(sorted(allowed_set))}
+    
+    # Build mapping from dataset folder index to target class index
+    folder_to_target = {}
+    for idx, folder in enumerate(dataset.classes):
+        matched = _match_class(folder, allowed_set)
+        if matched:
+            folder_to_target[idx] = (matched, allowed_classes.index(matched) if matched in allowed_classes else 0)
 
-    filtered_samples = [
-        (path, class_to_idx[dataset.classes[label]])
-        for path, label in dataset.samples
-        if dataset.classes[label] in allowed_set
-    ]
+    filtered_samples = []
+    for path, label in dataset.samples:
+        if label in folder_to_target:
+            matched_name, target_idx = folder_to_target[label]
+            filtered_samples.append((path, target_idx))
 
-    dataset.classes = sorted(allowed_set)
-    dataset.class_to_idx = class_to_idx
+    dataset.classes = allowed_classes
+    dataset.class_to_idx = {c: i for i, c in enumerate(allowed_classes)}
     dataset.samples = filtered_samples
     dataset.targets = [s[1] for s in filtered_samples]
     return dataset

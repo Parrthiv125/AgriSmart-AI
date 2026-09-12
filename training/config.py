@@ -81,8 +81,8 @@ USE_AMP = True                      # Automatic Mixed Precision (faster on GPU)
 
 # ── Data Split ──────────────────────────────────────────────────────────────
 TRAIN_RATIO = 0.80
-VAL_RATIO = 0.15
-TEST_RATIO = 0.05
+VAL_RATIO = 0.10
+TEST_RATIO = 0.10
 
 # ── Augmentation Flags ──────────────────────────────────────────────────────
 # See preprocessing.py for exact transforms

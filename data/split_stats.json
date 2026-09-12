@@ -1,0 +1,178 @@
+{
+  "total_images": 38542,
+  "train_total": 30841,
+  "val_total": 3866,
+  "test_total": 3835,
+  "file_overlap": 0,
+  "leaf_group_overlap": 0,
+  "per_class": {
+    "Apple \u2014 Apple Scab": {
+      "train": 504,
+      "val": 63,
+      "test": 63,
+      "total": 630
+    },
+    "Apple \u2014 Cedar Apple Rust": {
+      "train": 220,
+      "val": 28,
+      "test": 27,
+      "total": 275
+    },
+    "Apple \u2014 Healthy": {
+      "train": 1316,
+      "val": 165,
+      "test": 164,
+      "total": 1645
+    },
+    "Bell Pepper \u2014 Bacterial Spot": {
+      "train": 798,
+      "val": 100,
+      "test": 99,
+      "total": 997
+    },
+    "Bell Pepper \u2014 Healthy": {
+      "train": 1183,
+      "val": 148,
+      "test": 147,
+      "total": 1478
+    },
+    "Blueberry \u2014 Healthy": {
+      "train": 1202,
+      "val": 151,
+      "test": 149,
+      "total": 1502
+    },
+    "Cherry \u2014 Healthy": {
+      "train": 684,
+      "val": 86,
+      "test": 84,
+      "total": 854
+    },
+    "Corn \u2014 Cercospora Leaf Spot / Gray Leaf Spot": {
+      "train": 411,
+      "val": 52,
+      "test": 50,
+      "total": 513
+    },
+    "Corn \u2014 Common Rust": {
+      "train": 954,
+      "val": 120,
+      "test": 118,
+      "total": 1192
+    },
+    "Corn \u2014 Northern Leaf Blight": {
+      "train": 788,
+      "val": 99,
+      "test": 98,
+      "total": 985
+    },
+    "Grape \u2014 Black Rot": {
+      "train": 944,
+      "val": 118,
+      "test": 118,
+      "total": 1180
+    },
+    "Grape \u2014 Healthy": {
+      "train": 339,
+      "val": 43,
+      "test": 41,
+      "total": 423
+    },
+    "Peach \u2014 Healthy": {
+      "train": 288,
+      "val": 36,
+      "test": 36,
+      "total": 360
+    },
+    "Potato \u2014 Early Blight": {
+      "train": 800,
+      "val": 100,
+      "test": 100,
+      "total": 1000
+    },
+    "Potato \u2014 Late Blight": {
+      "train": 800,
+      "val": 100,
+      "test": 100,
+      "total": 1000
+    },
+    "Raspberry \u2014 Healthy": {
+      "train": 297,
+      "val": 38,
+      "test": 36,
+      "total": 371
+    },
+    "Soybean \u2014 Healthy": {
+      "train": 4072,
+      "val": 509,
+      "test": 509,
+      "total": 5090
+    },
+    "Squash \u2014 Powdery Mildew": {
+      "train": 1468,
+      "val": 184,
+      "test": 183,
+      "total": 1835
+    },
+    "Strawberry \u2014 Healthy": {
+      "train": 365,
+      "val": 46,
+      "test": 45,
+      "total": 456
+    },
+    "Tomato \u2014 Bacterial Spot": {
+      "train": 1702,
+      "val": 213,
+      "test": 212,
+      "total": 2127
+    },
+    "Tomato \u2014 Early Blight": {
+      "train": 800,
+      "val": 100,
+      "test": 100,
+      "total": 1000
+    },
+    "Tomato \u2014 Healthy": {
+      "train": 1273,
+      "val": 160,
+      "test": 158,
+      "total": 1591
+    },
+    "Tomato \u2014 Late Blight": {
+      "train": 1528,
+      "val": 191,
+      "test": 190,
+      "total": 1909
+    },
+    "Tomato \u2014 Leaf Mold": {
+      "train": 762,
+      "val": 96,
+      "test": 94,
+      "total": 952
+    },
+    "Tomato \u2014 Septoria Leaf Spot": {
+      "train": 1417,
+      "val": 178,
+      "test": 176,
+      "total": 1771
+    },
+    "Tomato \u2014 Spider Mites / Two-Spotted Spider Mite": {
+      "train": 1341,
+      "val": 168,
+      "test": 167,
+      "total": 1676
+    },
+    "Tomato \u2014 Tomato Mosaic Virus": {
+      "train": 299,
+      "val": 38,
+      "test": 36,
+      "total": 373
+    },
+    "Tomato \u2014 Tomato Yellow Leaf Curl Virus": {
+      "train": 4286,
+      "val": 536,
+      "test": 535,
+      "total": 5357
+    }
+  }
+}
