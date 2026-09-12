@@ -102,3 +102,5 @@ temp/
 # (use GitHub Releases or cloud storage for model weights > 100 MB)
 models/*.pth
 models/*.pt
+!models/agrismart_best.pth
+
