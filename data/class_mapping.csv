@@ -1,0 +1,39 @@
+original_plantvillage_class,development_class,mapping_status,reason/notes
+Apple___Apple_scab,Apple — Apple Scab,MAPPED,Exact 1-to-1 disease match
+Apple___Black_rot,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Apple___Cedar_apple_rust,Apple — Cedar Apple Rust,MAPPED,Exact 1-to-1 disease match
+Apple___healthy,Apple — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Blueberry___healthy,Blueberry — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Cherry_(including_sour)___Powdery_mildew,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Cherry_(including_sour)___healthy,Cherry — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot,Corn — Cercospora Leaf Spot / Gray Leaf Spot,MAPPED,Exact 1-to-1 disease match
+Corn_(maize)___Common_rust_,Corn — Common Rust,MAPPED,Exact 1-to-1 disease match
+Corn_(maize)___Northern_Leaf_Blight,Corn — Northern Leaf Blight,MAPPED,Exact 1-to-1 disease match
+Corn_(maize)___healthy,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Grape___Black_rot,Grape — Black Rot,MAPPED,Exact 1-to-1 disease match
+Grape___Esca_(Black_Measles),UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Grape___Leaf_blight_(Isariopsis_Leaf_Spot),UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Grape___healthy,Grape — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Orange___Haunglongbing_(Citrus_greening),UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Peach___Bacterial_spot,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Peach___healthy,Peach — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+"Pepper,_bell___Bacterial_spot",Bell Pepper — Bacterial Spot,MAPPED,Exact 1-to-1 disease match
+"Pepper,_bell___healthy",Bell Pepper — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Potato___Early_blight,Potato — Early Blight,MAPPED,Exact 1-to-1 disease match
+Potato___Late_blight,Potato — Late Blight,MAPPED,Exact 1-to-1 disease match
+Potato___healthy,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Raspberry___healthy,Raspberry — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Soybean___healthy,Soybean — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Squash___Powdery_mildew,Squash — Powdery Mildew,MAPPED,Exact 1-to-1 disease match
+Strawberry___Leaf_scorch,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Strawberry___healthy,Strawberry — Healthy,MAPPED,Exact 1-to-1 healthy crop match
+Tomato___Bacterial_spot,Tomato — Bacterial Spot,MAPPED,Exact 1-to-1 disease match
+Tomato___Early_blight,Tomato — Early Blight,MAPPED,Exact 1-to-1 disease match
+Tomato___Late_blight,Tomato — Late Blight,MAPPED,Exact 1-to-1 disease match
+Tomato___Leaf_Mold,Tomato — Leaf Mold,MAPPED,Exact 1-to-1 disease match
+Tomato___Septoria_leaf_spot,Tomato — Septoria Leaf Spot,MAPPED,Exact 1-to-1 disease match
+Tomato___Spider_mites Two-spotted_spider_mite,Tomato — Spider Mites / Two-Spotted Spider Mite,MAPPED,Exact 1-to-1 disease match
+Tomato___Target_Spot,UNMAPPED,UNMAPPED,Excluded from 28-class development set
+Tomato___Tomato_Yellow_Leaf_Curl_Virus,Tomato — Tomato Yellow Leaf Curl Virus,MAPPED,Exact 1-to-1 disease match
+Tomato___Tomato_mosaic_virus,Tomato — Tomato Mosaic Virus,MAPPED,Exact 1-to-1 disease match
+Tomato___healthy,Tomato — Healthy,MAPPED,Exact 1-to-1 healthy crop match

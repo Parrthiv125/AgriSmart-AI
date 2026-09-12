@@ -22,10 +22,39 @@ VAL_DIR = PROCESSED_DATA_DIR / "val"
 TEST_DIR = PROCESSED_DATA_DIR / "test"
 
 # ── Class Configuration ─────────────────────────────────────────────────────
-# IMPORTANT: Update this list with the official hackathon class list once received.
-# If None → automatically detect all classes from TRAIN_DIR folder names.
-CLASSES = None  # e.g. ["Tomato___Early_blight", "Tomato___healthy", ...]
+CLASS_MAPPING_CSV = DATA_DIR / "class_mapping.csv"
+DEVELOPMENT_CLASSES = [
+    "Apple — Apple Scab",
+    "Apple — Healthy",
+    "Apple — Cedar Apple Rust",
+    "Blueberry — Healthy",
+    "Cherry — Healthy",
+    "Corn — Cercospora Leaf Spot / Gray Leaf Spot",
+    "Corn — Common Rust",
+    "Corn — Northern Leaf Blight",
+    "Grape — Black Rot",
+    "Grape — Healthy",
+    "Peach — Healthy",
+    "Bell Pepper — Bacterial Spot",
+    "Bell Pepper — Healthy",
+    "Potato — Early Blight",
+    "Potato — Late Blight",
+    "Raspberry — Healthy",
+    "Soybean — Healthy",
+    "Squash — Powdery Mildew",
+    "Strawberry — Healthy",
+    "Tomato — Bacterial Spot",
+    "Tomato — Early Blight",
+    "Tomato — Late Blight",
+    "Tomato — Leaf Mold",
+    "Tomato — Septoria Leaf Spot",
+    "Tomato — Spider Mites / Two-Spotted Spider Mite",
+    "Tomato — Tomato Yellow Leaf Curl Virus",
+    "Tomato — Tomato Mosaic Virus",
+    "Tomato — Healthy"
+]
 
+CLASSES = DEVELOPMENT_CLASSES
 CLASSES_JSON = MODELS_DIR / "classes.json"
 
 # ── Model Configuration ─────────────────────────────────────────────────────
