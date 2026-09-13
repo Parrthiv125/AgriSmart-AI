@@ -40,29 +40,31 @@ from tqdm import tqdm
 import timm
 from sklearn.metrics import f1_score, accuracy_score
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from data.common import (
+    ROOT_DIR,
+    MODEL1_CKPT_PATH,
+    CLASSES_JSON,
+    MODEL2_TRAIN_DIR,
+    MODEL2_VAL_DIR,
+    MODEL2_CKPT_OUT,
+    MODEL2_LAST_OUT,
+    MODEL2_METADATA_OUT,
+    MODEL2_EXP_LOG,
+    PD_TEST_DIR,
+    IMAGE_SIZE,
+    NORM_MEAN,
+    NORM_STD,
+    SEED,
+    load_canonical_classes,
+)
+
 # Safe UTF-8 output on Windows
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT_DIR))
-
-# Default Paths
-MODEL1_CKPT_PATH = ROOT_DIR / "models" / "agrismart_best.pth"
-CLASSES_JSON = ROOT_DIR / "models" / "classes.json"
-MODEL2_TRAIN_DIR = ROOT_DIR / "data" / "processed_model2" / "train"
-MODEL2_VAL_DIR = ROOT_DIR / "data" / "processed_model2" / "val"
-MODEL2_CKPT_OUT = ROOT_DIR / "models" / "agrismart_field_adapted_best.pth"
-MODEL2_LAST_OUT = ROOT_DIR / "models" / "agrismart_field_adapted_last.pth"
-MODEL2_METADATA_OUT = ROOT_DIR / "models" / "agrismart_field_adapted_metadata.json"
-MODEL2_EXP_LOG = ROOT_DIR / "experiments_model2.csv"
-PLANTDOC_TEST_DIR = ROOT_DIR / "data" / "plantdoc" / "test"
-
-# Config constants
-IMAGE_SIZE = 260
-NORM_MEAN = [0.485, 0.456, 0.406]
-NORM_STD = [0.229, 0.224, 0.225]
-SEED = 42
 
 
 def set_seed(seed: int = SEED):
@@ -237,18 +239,17 @@ def run_training_model2(
     print(f"  Epochs:                      {'1 (DRY RUN)' if is_dry_run else epochs}")
     print(f"  Batch Size:                  {batch_size}")
     print(f"  Learning Rate:               {lr}")
-    print(f"  LOCKED PlantDoc Test Dir:    {PLANTDOC_TEST_DIR} (UNTOUCHED)")
+    print(f"  LOCKED PlantDoc Test Dir:    {PD_TEST_DIR} (UNTOUCHED)")
     print()
 
-    # Verify input paths
+    # Verify input paths; self-heal if missing
     if not MODEL2_TRAIN_DIR.exists() or not MODEL2_VAL_DIR.exists():
-        print("[ERROR] Model 2 processed datasets missing. Run: python data/prepare_model2_dataset.py first.")
-        sys.exit(1)
+        print("[WARN] Model 2 processed datasets missing. Triggering automatic dataset preparation...")
+        from data.prepare_model2_dataset import prepare_model2_dataset
+        prepare_model2_dataset()
 
-    # Load 28 classes
-    with open(CLASSES_JSON, "r", encoding="utf-8") as f:
-        classes_dict = json.load(f)
-    class_names = [classes_dict[str(i)] for i in range(len(classes_dict))]
+    # Load canonical 28 classes
+    class_names = load_canonical_classes()
     num_classes = len(class_names)
 
     # Transforms & Datasets
@@ -357,21 +358,21 @@ def run_training_model2(
                 "best_epoch": best_epoch,
             }, MODEL2_LAST_OUT)
 
-        # Log
-        log_experiment_model2({
-            "experiment_id": experiment_id,
-            "epoch": epoch + 1,
-            "model": "efficientnet_b2",
-            "plantdoc_oversample_factor": plantdoc_oversample_factor,
-            "train_loss": round(train_loss, 4),
-            "train_f1": round(train_f1, 4),
-            "train_acc": round(train_acc, 4),
-            "val_loss": round(val_loss, 4),
-            "val_f1": round(val_f1, 4),
-            "val_acc": round(val_acc, 4),
-            "best_val_f1": round(best_val_f1, 4),
-            "is_dry_run": is_dry_run,
-        })
+            # Log
+            log_experiment_model2({
+                "experiment_id": experiment_id,
+                "epoch": epoch + 1,
+                "model": "efficientnet_b2",
+                "plantdoc_oversample_factor": plantdoc_oversample_factor,
+                "train_loss": round(train_loss, 4),
+                "train_f1": round(train_f1, 4),
+                "train_acc": round(train_acc, 4),
+                "val_loss": round(val_loss, 4),
+                "val_f1": round(val_f1, 4),
+                "val_acc": round(val_acc, 4),
+                "best_val_f1": round(best_val_f1, 4),
+                "is_dry_run": is_dry_run,
+            })
 
     # Save metadata payload
     metadata_payload = {
@@ -429,7 +430,7 @@ def run_training_model2(
     print(f"  Best Epoch:           {best_epoch}")
     print(f"  Model 2 Checkpoint:   {model2_out_path}")
     print(f"  Model 1 Checkpoint:   {model1_path} (UNTOUCHED)")
-    print(f"  PlantDoc Test Set:    {PLANTDOC_TEST_DIR} (LOCKED & UNTOUCHED)")
+    print(f"  PlantDoc Test Set:    {PD_TEST_DIR} (LOCKED & UNTOUCHED)")
     print("=" * 70)
 
     return metadata_payload

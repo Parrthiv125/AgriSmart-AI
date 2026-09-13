@@ -1,16 +1,16 @@
 """
-AgriSmart AI — Model 2 Pipeline Verification
-=============================================
+AgriSmart AI — Model 2 Pipeline & Guardrail Verification
+============================================================
 Standalone verification script checking all Model 2 guardrails:
-  1. Required datasets/directories exist.
-  2. Model 1 checkpoint exists & loads cleanly into timm EfficientNet-B2.
-  3. Architecture == efficientnet_b2, Classes == 28, Size == 260x260.
-  4. classes.json matches checkpoint class ordering exactly.
-  5. PlantDoc test & PlantVillage test are isolated and NOT in training/val.
-  6. Zero file leakage across all 4 split combinations.
-  7. DataLoader produces valid batches ([B, 3, 260, 260], labels 0..27).
-  8. Loss calculation & forward pass succeed without error.
-  9. Model 1 hash is verified unmodified.
+  1. Required datasets & directory existence.
+  2. Model 1 checkpoint integrity (SHA256 af9684b0...).
+  3. EfficientNet-B2 architecture, 28 classes, 260x260 image size.
+  4. classes.json alignment with checkpoint.
+  5. State dict loading cleanly.
+  6. Authoritative SHA256 0-leakage verification (via data.leakage_checker).
+  7. DataLoader batch generation ([B, 3, 260, 260], labels 0..27).
+  8. Forward pass & loss calculation.
+  9. Automatic dataset self-healing if processed dataset is missing or stale.
 
 Usage:
     python data/verify_model2_pipeline.py
@@ -26,24 +26,30 @@ from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 import timm
 
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
+
+from data.common import (
+    ROOT_DIR,
+    CLASSES_JSON,
+    MODEL1_CKPT_PATH,
+    EXPECTED_MODEL1_HASH,
+    MODEL2_TRAIN_DIR,
+    MODEL2_VAL_DIR,
+    PV_TEST_DIR,
+    PD_TEST_DIR,
+    IMAGE_SIZE,
+    NORM_MEAN,
+    NORM_STD,
+    load_canonical_classes,
+)
+from data.leakage_checker import audit_content_leakage
+from data.prepare_model2_dataset import prepare_model2_dataset
+
 # Safe UTF-8 output on Windows
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
-
-ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT_DIR))
-
-MODEL1_CKPT = ROOT_DIR / "models" / "agrismart_best.pth"
-CLASSES_JSON = ROOT_DIR / "models" / "classes.json"
-
-MODEL2_TRAIN_DIR = ROOT_DIR / "data" / "processed_model2" / "train"
-MODEL2_VAL_DIR = ROOT_DIR / "data" / "processed_model2" / "val"
-
-PV_TEST_DIR = ROOT_DIR / "data" / "processed" / "test"
-PD_TEST_DIR = ROOT_DIR / "data" / "plantdoc" / "test"
-
-IMAGE_SIZE = 260
-EXPECTED_MODEL1_HASH = "af9684b036dac12c650004a2877add20708007ad34811015d1efaf5bcea06215"
 
 
 def verify_model2_pipeline():
@@ -53,13 +59,11 @@ def verify_model2_pipeline():
 
     errors = []
 
-    # 1. Directory & File Existence Checks
+    # 1. Directory & File Existence Checks (Self-healing dataset trigger)
     print("\n[1/8] Checking file & directory existence...")
     required_paths = [
-        (MODEL1_CKPT, "Model 1 checkpoint"),
+        (MODEL1_CKPT_PATH, "Model 1 checkpoint"),
         (CLASSES_JSON, "classes.json"),
-        (MODEL2_TRAIN_DIR, "Model 2 train dir"),
-        (MODEL2_VAL_DIR, "Model 2 val dir"),
         (PV_TEST_DIR, "PlantVillage test dir"),
         (PD_TEST_DIR, "PlantDoc test dir"),
     ]
@@ -74,9 +78,17 @@ def verify_model2_pipeline():
         print("\n[ERROR] VERIFICATION FAILED at Step 1.")
         sys.exit(1)
 
+    # Check Model 2 processed datasets; self-heal if missing
+    if not MODEL2_TRAIN_DIR.exists() or not MODEL2_VAL_DIR.exists():
+        print("  [WARN] Model 2 processed dataset missing. Triggering automatic self-healing build...")
+        prepare_model2_dataset()
+
+    print(f"  [OK] Model 2 Train Dir: {MODEL2_TRAIN_DIR.relative_to(ROOT_DIR)}")
+    print(f"  [OK] Model 2 Val Dir:   {MODEL2_VAL_DIR.relative_to(ROOT_DIR)}")
+
     # 2. Model 1 Checkpoint Hash Verification
     print("\n[2/8] Verifying Model 1 file integrity & SHA256 hash...")
-    current_hash = hashlib.sha256(MODEL1_CKPT.read_bytes()).hexdigest()
+    current_hash = hashlib.sha256(MODEL1_CKPT_PATH.read_bytes()).hexdigest()
     if current_hash != EXPECTED_MODEL1_HASH:
         errors.append(f"Model 1 hash mismatch! Expected {EXPECTED_MODEL1_HASH}, got {current_hash}")
         print(f"  [FAIL] Model 1 HASH MISMATCH! File has been altered.")
@@ -85,7 +97,7 @@ def verify_model2_pipeline():
 
     # 3. Model 1 Checkpoint Metadata & Loading Check
     print("\n[3/8] Loading Model 1 checkpoint & checking architecture...")
-    ckpt = torch.load(MODEL1_CKPT, map_location="cpu", weights_only=False)
+    ckpt = torch.load(MODEL1_CKPT_PATH, map_location="cpu", weights_only=False)
     
     model_name = ckpt.get("model_name", "efficientnet_b2")
     num_classes = ckpt.get("num_classes", 28)
@@ -103,10 +115,7 @@ def verify_model2_pipeline():
 
     # 4. classes.json Alignment Check
     print("\n[4/8] Verifying classes.json alignment...")
-    with open(CLASSES_JSON, "r", encoding="utf-8") as f:
-        classes_dict = json.load(f)
-    json_classes = [classes_dict[str(i)] for i in range(len(classes_dict))]
-
+    json_classes = load_canonical_classes()
     if json_classes != ckpt_classes:
         errors.append("class ordering in classes.json does not match checkpoint!")
         print("  [FAIL] Mismatch between classes.json and checkpoint class names!")
@@ -122,47 +131,41 @@ def verify_model2_pipeline():
     model.eval()
     print("  [OK] State dict loaded cleanly without error.")
 
-    # 6. Leakage & Test Set Protection Checks
-    print("\n[6/8] Running strict 0-leakage verification...")
-    manifest_path = ROOT_DIR / "data" / "model2_manifest.json"
-    if manifest_path.exists():
-        with open(manifest_path, "r", encoding="utf-8") as f:
-            manifest = json.load(f)
-        train_orig_stems = {item["original_filename"] for item in manifest if item["split"] == "train"}
-        val_orig_stems = {item["original_filename"] for item in manifest if item["split"] == "val"}
+    # 6. Authoritative SHA256 Content Leakage Audit
+    print("\n[6/8] Running authoritative SHA256 0-leakage verification...")
+    audit = audit_content_leakage(
+        train_dir=MODEL2_TRAIN_DIR,
+        val_dir=MODEL2_VAL_DIR,
+        pd_test_dir=PD_TEST_DIR,
+        pv_test_dir=PV_TEST_DIR,
+        verbose=False,
+    )
+
+    if not audit["is_clean"]:
+        print("  [WARN] Content leakage detected in processed dataset! Triggering dataset self-healing rebuild...")
+        prepare_model2_dataset()
+        audit = audit_content_leakage(
+            train_dir=MODEL2_TRAIN_DIR,
+            val_dir=MODEL2_VAL_DIR,
+            pd_test_dir=PD_TEST_DIR,
+            pv_test_dir=PV_TEST_DIR,
+            verbose=False,
+        )
+
+    if not audit["is_clean"]:
+        errors.append("Content leakage remains after self-healing rebuild!")
+        print("  [FAIL] SHA256 Content Leakage Verification Failed!")
     else:
-        train_orig_stems = {f.name for f in MODEL2_TRAIN_DIR.rglob("*") if f.is_file()}
-        val_orig_stems = {f.name for f in MODEL2_VAL_DIR.rglob("*") if f.is_file()}
-
-    pd_test_files = {f.name for f in PD_TEST_DIR.rglob("*") if f.is_file()}
-    pv_test_files = {f.name for f in PV_TEST_DIR.rglob("*") if f.is_file()}
-
-    leakages = {
-        "Train vs Val": len(train_orig_stems & val_orig_stems),
-        "Train vs PlantDoc Test": len(train_orig_stems & pd_test_files),
-        "Val vs PlantDoc Test": len(val_orig_stems & pd_test_files),
-        "Train vs PlantVillage Test": len(train_orig_stems & pv_test_files),
-        "Val vs PlantVillage Test": len(val_orig_stems & pv_test_files),
-    }
-
-    leakage_failed = False
-    for label, count in leakages.items():
-        if count != 0:
-            errors.append(f"Leakage detected in {label}: {count} overlapping files")
-            print(f"  [FAIL] {label}: FAILED ({count} files overlap!)")
-            leakage_failed = True
-        else:
-            print(f"  [OK] {label}: 0 overlap")
-
-    if not leakage_failed:
-        print(f"  [OK] ALL TEST SETS (PlantDoc {len(pd_test_files)} imgs, PlantVillage {len(pv_test_files)} imgs) ARE LOCKED & ISOLATED.")
+        print(f"  [OK] SHA256 Content Audit PASSED: 0 true content duplicates in train/val.")
+        print(f"  [OK] Preserved {audit['filename_collisions_count']} safe filename-only collisions.")
+        print(f"  [OK] PlantDoc TEST ({len(list(PD_TEST_DIR.rglob('*')))} imgs) & PlantVillage TEST ({len(list(PV_TEST_DIR.rglob('*')))} imgs) ARE LOCKED & UNTOUCHED.")
 
     # 7. DataLoader & Batch Processing Sanity Check
     print("\n[7/8] Testing DataLoader batch generation...")
     val_transform = transforms.Compose([
         transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
         transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        transforms.Normalize(mean=NORM_MEAN, std=NORM_STD),
     ])
     val_dataset = datasets.ImageFolder(MODEL2_VAL_DIR, transform=val_transform)
     val_loader = DataLoader(val_dataset, batch_size=8, shuffle=False)

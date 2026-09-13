@@ -53,6 +53,7 @@ data/processed_model2/
 data/plantvillage/
 data/plantdoc/
 data/model2_manifest.json
+data/model2_split_stats.json
 *.zip
 *.tar.gz
 *.tar
