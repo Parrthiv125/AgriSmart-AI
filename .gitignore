@@ -67,12 +67,13 @@ models/*.pth
 models/*.pt
 !models/agrismart_best.pth
 
-# Logs and experiment tracking
+# Logs and experiment tracking / scratch
 *.log
 experiments/
 mlruns/
 wandb/
 runs/
+scratch/
 
 # OS & IDE
 .DS_Store
