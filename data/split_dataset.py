@@ -61,20 +61,43 @@ def load_mapping() -> Dict[str, str]:
                 mapped_classes[row["original_plantvillage_class"]] = row["development_class"]
     return mapped_classes
 
+def find_base_raw_dir(raw_dir: Path, mapped_classes: Dict[str, str]) -> Path:
+    """
+    Find the directory containing PlantVillage color image class subfolders.
+    Prioritizes 'raw/color/' (HuggingFace zip extraction path),
+    then 'color/', then 'PlantVillage/color/', and falls back to raw_dir.
+    Only uses color images; never grayscale or segmented.
+    """
+    candidates = [
+        raw_dir / "raw" / "color",
+        raw_dir / "color",
+        raw_dir / "PlantVillage" / "color",
+        raw_dir,
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            subdirs = {d.name for d in candidate.iterdir() if d.is_dir()}
+            if any(orig_folder in subdirs for orig_folder in mapped_classes.keys()):
+                return candidate
+    return raw_dir
+
 def split_dataset(
     seed: int = SEED,
     train_ratio: float = TRAIN_RATIO,
     val_ratio: float = VAL_RATIO,
     test_ratio: float = TEST_RATIO
 ):
+    mapped_classes = load_mapping()
+    base_raw_dir = find_base_raw_dir(RAW_DATA_DIR, mapped_classes)
+
     print("=" * 70)
     print(" AGRISMART AI — LEAKAGE-SAFE DATASET SPLITTER")
     print("=" * 70)
     print(f"Source Raw Data: {RAW_DATA_DIR}")
+    print(f"Active Raw Color Dir: {base_raw_dir}")
     print(f"Target Processed Data: {PROCESSED_DATA_DIR}")
     print(f"Split Ratios: Train={train_ratio:.0%}, Val={val_ratio:.0%}, Test={test_ratio:.0%} | Seed: {seed}\n")
 
-    mapped_classes = load_mapping()
     print(f"[OK] Loaded {len(mapped_classes)} mapped PlantVillage class folders.")
 
     # Group files by development class and leaf group ID
@@ -82,7 +105,7 @@ def split_dataset(
     total_images_discovered = 0
 
     for orig_folder, dev_class in mapped_classes.items():
-        folder_path = RAW_DATA_DIR / orig_folder
+        folder_path = base_raw_dir / orig_folder
         if not folder_path.exists():
             print(f"[!] Warning: Raw folder missing: {folder_path}")
             continue
@@ -93,6 +116,7 @@ def split_dataset(
                     leaf_id = extract_leaf_group_id(entry.name)
                     class_leaf_groups[dev_class][leaf_id].append(entry.path)
                     total_images_discovered += 1
+
 
     print(f"[OK] Discovered {total_images_discovered} mapped images across {len(class_leaf_groups)} development classes.")
 

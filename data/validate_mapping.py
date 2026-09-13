@@ -104,13 +104,27 @@ def generate_csv():
     print(f"[OK] Class mapping CSV created at: {MAPPING_CSV_PATH}")
 
 def save_dev_classes_json():
-    """Save models/classes.json and data/development_classes.json with the 28 development classes."""
-    CLASSES_JSON_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(CLASSES_JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump(DEVELOPMENT_CLASSES, f, indent=2)
+    """Save data/development_classes.json with the 28 development classes."""
     with open(DEV_CLASSES_JSON_PATH, "w", encoding="utf-8") as f:
         json.dump(DEVELOPMENT_CLASSES, f, indent=2)
-    print(f"[OK] Saved 28 development classes to {CLASSES_JSON_PATH} and {DEV_CLASSES_JSON_PATH}")
+    print(f"[OK] Saved 28 development classes to {DEV_CLASSES_JSON_PATH}")
+
+
+
+def find_base_raw_dir(raw_dir: Path) -> Path:
+    """Find directory containing PlantVillage raw color class subfolders."""
+    candidates = [
+        raw_dir / "raw" / "color",
+        raw_dir / "color",
+        raw_dir / "PlantVillage" / "color",
+        raw_dir,
+    ]
+    for candidate in candidates:
+        if candidate.exists() and candidate.is_dir():
+            subdirs = {d.name for d in candidate.iterdir() if d.is_dir()}
+            if any(k in subdirs for k in MAPPING_RULES.keys()):
+                return candidate
+    return raw_dir
 
 def validate_pipeline(check_readability=True):
     """Run verification checks on the raw dataset and mapping rules."""
@@ -121,8 +135,12 @@ def validate_pipeline(check_readability=True):
     if not RAW_DATA_DIR.exists():
         raise FileNotFoundError(f"Raw data directory missing at: {RAW_DATA_DIR}")
 
-    actual_folders = sorted([d.name for d in RAW_DATA_DIR.iterdir() if d.is_dir()])
+    base_raw_dir = find_base_raw_dir(RAW_DATA_DIR)
+    print(f"Active Raw Color Dir: {base_raw_dir}")
+
+    actual_folders = sorted([d.name for d in base_raw_dir.iterdir() if d.is_dir()])
     print(f"Total original folders found in raw dataset: {len(actual_folders)}")
+
 
     # 1. Uniqueness and Overlap Check
     mapped_orig_to_dev = {}
@@ -153,7 +171,8 @@ def validate_pipeline(check_readability=True):
 
     print("\n--- Processing Raw Image Files ---")
     for orig_folder in actual_folders:
-        folder_path = RAW_DATA_DIR / orig_folder
+        folder_path = base_raw_dir / orig_folder
+
         
         status_info = MAPPING_RULES.get(orig_folder, ("UNMAPPED", "UNMAPPED", "Unknown"))
         dev_class, status, _ = status_info
