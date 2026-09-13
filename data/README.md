@@ -150,3 +150,55 @@ python data/sanity_check_dataloaders.py
 - `data/split_stats.json`: Split statistics containing exact train/val/test counts per class.
 - `data/development_classes.json`: Reference list of the 28 development classes.
 - `models/classes.json`: Model runtime class list.
+
+---
+
+## PlantDoc — External Field-Generalization Dataset
+
+### Source & License
+- **GitHub Repository:** https://github.com/pratikkayal/PlantDoc-Dataset
+- **License:** Creative Commons Attribution 4.0 International (CC-BY-4.0)
+- **Citation:** Singh, D., Jain, N., Jain, P., Kayal, P., Kumawat, S., Batra, N. (2020). PlantDoc: A Dataset for Visual Plant Disease Detection. CoDS-COMAD 2020. DOI: 10.1145/3371158.3371196
+- **Nature:** 2,524 images of plant diseases collected by scraping the internet. Real-world field conditions (variable lighting, backgrounds, clutter, multiple leaves).
+
+### Dataset Statistics
+
+| Split | Classes | Images | Notes |
+|---|---|---|---|
+| train | 28 | 2,291 | NOT used for training in current phase |
+| test | 27 | 233 | Evaluation-only: external field-generalization test |
+| **Total** | **28** | **2,524** | 4 files skipped (Windows MAX_PATH exceeded) |
+
+**Missing from test split:** `Tomato — Spider Mites / Two-Spotted Spider Mite` (only 2 train images in PlantDoc; 0 test images).
+
+### PlantDoc → AgriSmart 28-Class Mapping
+
+Full mapping defined in `data/plantdoc_class_mapping.csv` and `data/plantdoc_mapping.json`.
+All 28 PlantDoc folders are explicitly mapped — no silent drops, no fabricated classes.
+
+**Key mapping assumption (documented):**
+> `Corn leaf blight` → `Corn — Northern Leaf Blight`: NLB (Exserohilum turcicum) is the dominant corn blight in PlantDoc images. This is an evaluation mapping assumption explicitly recorded in the CSV.
+
+### PlantDoc Pipeline Commands
+
+```bash
+# 1. Download PlantDoc from GitHub (ZIP, ~40MB; git clone fails on Windows NTFS
+#    due to '?' characters in filenames)
+python data/download_plantdoc.py
+
+# 2. Inspect raw dataset (counts, corruption check, mapping coverage)
+python data/inspect_plantdoc.py
+
+# 3. Organise into AgriSmart class structure under data/plantdoc/
+python data/prepare_plantdoc.py
+
+# 4. Run external evaluation against baseline model
+python evaluation/evaluate_plantdoc.py
+```
+
+### Important Notes
+
+- `data/raw/plantdoc/` and `data/plantdoc/` are **excluded from git** (see `.gitignore`).
+- `data/plantdoc/train/` is reserved for future domain adaptation. It was **NOT used for training** in the current phase.
+- `data/plantdoc/test/` is the **held-out external evaluation set** used to measure field-generalization of the baseline model.
+- PlantVillage `data/processed/` splits are **completely separate** — zero filename overlap confirmed.

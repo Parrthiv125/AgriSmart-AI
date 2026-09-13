@@ -24,19 +24,30 @@ Crop diseases cause severe agricultural yield losses globally, threatening small
 | **Phase 2** | Evaluation & Held-Out Testing | ✅ Completed | **0.9961 Test Macro-F1** across 3,835 test images |
 | **Phase 3** | Local Model Integration & Verification | ✅ Completed | Weights & class JSON integrated (`models/verify_model.py`) |
 | **Phase 4** | Inference Engine CLI & Python API | ✅ Completed | `inference/predict.py` with precaution lookup |
-| **Phase 5** | FastAPI REST Server (`POST /predict`) | 🔄 Next Phase | Planned REST API server |
-| **Phase 6** | Interactive Web Frontend | 🔄 Next Phase | Planned web user interface |
+| **Phase 5** | External Field-Generalization Test | ✅ Completed | PlantDoc test set: **0.2311 Macro-F1** (domain gap measured) |
+| **Phase 6** | FastAPI REST Server (`POST /predict`) | 🔄 Next Phase | Planned REST API server |
+| **Phase 7** | Interactive Web Frontend | 🔄 Next Phase | Planned web user interface |
 
-*Note: Core ML dataset preparation, model training, evaluation, and local model integration are 100% completed and verified. REST API backend and Web Frontend modules are scheduled for the next development phase.*
+*Note: Core ML training, evaluation, external field-generalization testing, and local model integration are 100% completed and verified. REST API backend and Web Frontend modules are scheduled for the next development phase.*
 
 ---
 
-## 📊 Dataset & 28 Development Classes
+## 📊 Datasets & 28 Development Classes
 
-- **Primary Dataset:** PlantVillage on Hugging Face ([`mohanty/PlantVillage`](https://huggingface.co/datasets/mohanty/PlantVillage))
+### Primary Training Dataset — PlantVillage
+- **Source:** Hugging Face ([`mohanty/PlantVillage`](https://huggingface.co/datasets/mohanty/PlantVillage))
 - **License:** CC0 / Public Domain
 - **Citation:** Hughes, D. P., & Salathé, M. (2015). *An open access repository of images on plant health to enable the development of mobile disease diagnostics*. arXiv:1511.08060.
-- **Mapped Dataset Size:** 38,542 images across 28 official development classes (filtered from 38 original raw PlantVillage class folders without data loss or silent class merging).
+- **Mapped Dataset Size:** 38,542 images across 28 development classes (from 38 original folders).
+- **Nature:** Controlled laboratory conditions — isolated leaves on uniform backgrounds.
+
+### External Field-Generalization Dataset — PlantDoc
+- **Source:** GitHub ([`pratikkayal/PlantDoc-Dataset`](https://github.com/pratikkayal/PlantDoc-Dataset))
+- **License:** Creative Commons Attribution 4.0 International (CC-BY-4.0)
+- **Citation:** Singh, D. et al. (2020). *PlantDoc: A Dataset for Visual Plant Disease Detection*. CoDS-COMAD 2020. DOI: 10.1145/3371158.3371196
+- **Size:** 2,524 images (2,291 train / 233 test) across 28 classes (internet-scraped real-world field images).
+- **Nature:** Real-world conditions — variable lighting, backgrounds, clutter; significantly harder than PlantVillage.
+- **Mapping:** Explicit 28-folder → 28-class mapping documented in `data/plantdoc_class_mapping.csv`.
 
 ### Leakage-Safe Leaf-Group Split Methodology
 To prevent severe data leakage caused by multi-view photos of the same physical leaf appearing in both training and test sets, split logic is performed strictly at the **leaf group** (`leaf_id`) level using fixed random seeds (`SEED=42`).
@@ -59,17 +70,38 @@ To prevent severe data leakage caused by multi-view photos of the same physical 
 
 ## 📈 Evaluation & Results
 
-Evaluated on the held-out 3,835-image PlantVillage test set:
+### ⚠️ Three Distinct Test Evaluations — Do NOT conflate
 
-| Evaluation Metric | Validation Set | Held-Out Test Set | Target / Requirement | Status |
-|---|---|---|---|---|
-| **Macro-F1 Score** | **0.9979** | **0.9961** | High Macro-F1 | ✅ Passed |
-| **Accuracy** | **0.9979** (99.79%) | **0.9971** (99.71%) | > 95.0% | ✅ Passed |
-| **Evaluated Images** | 3,866 | 3,835 | — | ✅ Complete |
-| **Best Checkpoint** | Epoch 23 | Epoch 23 | — | ✅ Saved |
+| Test Set | Source | Images | Macro-F1 | Accuracy | Nature |
+|---|---|---|---|---|---|
+| **PlantVillage Validation** | PlantVillage (in-domain) | 3,866 | **0.9979** | **99.79%** | Lab, controlled |
+| **PlantVillage Local Test** | PlantVillage (in-domain) | 3,835 | **0.9961** | **99.71%** | Lab, controlled |
+| **PlantDoc External Test** | PlantDoc (field images) | 233 | **0.2311** | **27.47%** | Real-world field |
+| **Organizer Hidden Test** | SIH Competition | — | *TBD* | *TBD* | Official metric |
 
-> ⚠️ **Important Evaluation Note:**  
-> The **99.61% Test Macro-F1** score was evaluated on the held-out **PlantVillage test set**. This demonstrates exceptional in-domain accuracy on controlled laboratory leaf images, but must **NOT** be described as real-world field-condition accuracy. Complex field conditions (variable lighting, shadows, soil background clutter, multiple leaves) present distinct generalization challenges addressed separately via robustness augmentations and field testing.
+### PlantVillage In-Domain Results (Primary Training Metric)
+Evaluated on the held-out leakage-safe PlantVillage test split:
+
+| Metric | Validation | Held-Out Test |
+|---|---|---|
+| Macro-F1 | 0.9979 | **0.9961** |
+| Accuracy | 99.79% | **99.71%** |
+| Best Checkpoint | Epoch 23 | Epoch 23 |
+
+### External PlantDoc Field-Generalization Results
+Evaluated on the **original PlantDoc test split (233 images, 27 classes)** — a completely separate dataset of internet-scraped real-world field images **not used in training**.
+
+| Metric | Result |
+|---|---|
+| **Macro-F1** | **0.2311** |
+| **Accuracy** | **27.47%** |
+| Images evaluated | 233 |
+| Classes with F1 = 0 | 8 of 27 evaluated |
+| Best class (Raspberry — Healthy) | F1 = 0.667 |
+
+This large drop (0.9961 → 0.2311) confirms the **lab-to-field domain gap**: the baseline model was trained exclusively on controlled PlantVillage images and has not been adapted for real-world field conditions. This result is **expected and informative** — it establishes the baseline for domain adaptation work.
+
+> **Note on the Organizer Hidden Test Set:** The official SIH/competition score uses the organizer's private held-out images. Neither PlantVillage local test nor PlantDoc results should be compared directly to it.
 
 ---
 
@@ -89,8 +121,14 @@ AgriSmart-AI/
 │
 ├── data/                               ← Dataset Pipeline
 │   ├── README.md                       ← Dataset download & split documentation
-│   ├── class_mapping.csv               ← 38 -> 28 class translation table
-│   ├── validate_mapping.py             ← Class mapping validator
+│   ├── class_mapping.csv               ← 38 -> 28 PlantVillage class translation table
+│   ├── plantdoc_class_mapping.csv      ← 28-folder -> 28-class PlantDoc mapping
+│   ├── plantdoc_mapping.json           ← Machine-readable PlantDoc mapping dict
+│   ├── download_dataset.py             ← PlantVillage downloader (HF data.zip)
+│   ├── download_plantdoc.py            ← PlantDoc downloader (GitHub ZIP)
+│   ├── inspect_plantdoc.py             ← PlantDoc health audit script
+│   ├── prepare_plantdoc.py             ← PlantDoc -> AgriSmart class organizer
+│   ├── validate_mapping.py             ← PlantVillage class mapping validator
 │   ├── split_dataset.py                ← Leaf-group isolated 80/10/10 splitter
 │   └── sanity_check_dataloaders.py     ← DataLoader verification script
 │
@@ -148,9 +186,10 @@ print("Precaution:", result["precaution"])
 
 ## ⚠️ Limitations & Field Generalization
 
-1. **Lab vs Field Domain Gap**: PlantVillage images feature isolated leaves against clean, uniform backgrounds. Real-world field performance may vary due to outdoor lighting, shadows, weed backgrounds, and multi-leaf clutter.
+1. **Lab vs Field Domain Gap (Measured)**: External evaluation on the PlantDoc field dataset yielded Macro-F1 = 0.2311 vs 0.9961 on PlantVillage — confirming a significant domain gap. The baseline model was trained only on controlled lab images. Domain adaptation (fine-tuning on PlantDoc or mixed data) is the planned next step.
 2. **Diagnostic Disclaimer**: AgriSmart AI provides automated screening and precautionary guidance. It is intended to assist farmers and extension workers, not replace qualified agronomists.
 3. **Low-Confidence Handling**: Predictions with confidence below thresholds trigger a low-confidence warning advising the user to provide a clearer, better-lit leaf photo.
+4. **PlantDoc Coverage**: The PlantDoc test split does not include images for `Tomato — Spider Mites / Two-Spotted Spider Mite` (0 test images in that split), so that class is excluded from the external field evaluation.
 
 ---
 
@@ -158,6 +197,7 @@ print("Precaution:", result["precaution"])
 
 - **License**: MIT License
 - **PlantVillage Dataset**: CC0 Public Domain ([Hughes & Salathé, 2015](https://huggingface.co/datasets/mohanty/PlantVillage))
+- **PlantDoc Dataset**: CC-BY-4.0 ([Singh et al., CoDS-COMAD 2020](https://github.com/pratikkayal/PlantDoc-Dataset))
 
 ---
 

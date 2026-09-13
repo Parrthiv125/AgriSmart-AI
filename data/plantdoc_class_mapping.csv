@@ -1,0 +1,29 @@
+plantdoc_folder,agrismart_class,mapping_status,notes
+Apple Scab Leaf,Apple — Apple Scab,MAPPED,Exact disease match
+Apple leaf,Apple — Healthy,MAPPED,Healthy apple leaf — no disease indicators in PlantDoc images
+Apple rust leaf,Apple — Cedar Apple Rust,MAPPED,Apple rust = Cedar Apple Rust; standard agronomic equivalence
+Bell_pepper leaf spot,Bell Pepper — Bacterial Spot,MAPPED,Pepper leaf spot disease; bacterial spot is the dominant pepper spot class in PlantDoc
+Bell_pepper leaf,Bell Pepper — Healthy,MAPPED,Healthy bell pepper leaf
+Blueberry leaf,Blueberry — Healthy,MAPPED,Only blueberry class in AgriSmart system; PlantDoc blueberry images are healthy
+Cherry leaf,Cherry — Healthy,MAPPED,Only cherry class in AgriSmart system; PlantDoc cherry images are healthy
+Corn Gray leaf spot,Corn — Cercospora Leaf Spot / Gray Leaf Spot,MAPPED,Exact synonym; Gray Leaf Spot = Cercospora zeae-maydis infection
+Corn leaf blight,Corn — Northern Leaf Blight,MAPPED,EVALUATION MAPPING ASSUMPTION: NLB (Exserohilum turcicum) is the dominant corn blight in PlantDoc; mapped as NLB for this evaluation
+Corn rust leaf,Corn — Common Rust,MAPPED,Corn rust = Puccinia sorghi (Common Rust); exact match
+Peach leaf,Peach — Healthy,MAPPED,Only peach class in AgriSmart system; PlantDoc peach images are healthy
+Potato leaf early blight,Potato — Early Blight,MAPPED,Exact disease match — Alternaria solani
+Potato leaf late blight,Potato — Late Blight,MAPPED,Exact disease match — Phytophthora infestans
+Raspberry leaf,Raspberry — Healthy,MAPPED,Only raspberry class in AgriSmart system; PlantDoc raspberry images are healthy
+Soyabean leaf,Soybean — Healthy,MAPPED,Spelling variant of Soybean; same species (Glycine max); healthy images only
+Squash Powdery mildew leaf,Squash — Powdery Mildew,MAPPED,Exact disease match — Podosphaera xanthii
+Strawberry leaf,Strawberry — Healthy,MAPPED,Only strawberry class in AgriSmart system; PlantDoc strawberry images are healthy
+Tomato Early blight leaf,Tomato — Early Blight,MAPPED,Exact disease match — Alternaria solani
+Tomato Septoria leaf spot,Tomato — Septoria Leaf Spot,MAPPED,Exact disease match — Septoria lycopersici
+Tomato leaf bacterial spot,Tomato — Bacterial Spot,MAPPED,Exact disease match — Xanthomonas campestris
+Tomato leaf late blight,Tomato — Late Blight,MAPPED,Exact disease match — Phytophthora infestans
+Tomato leaf mosaic virus,Tomato — Tomato Mosaic Virus,MAPPED,Exact disease match — ToMV
+Tomato leaf yellow virus,Tomato — Tomato Yellow Leaf Curl Virus,MAPPED,Yellow leaf virus = TYLCV (Tomato Yellow Leaf Curl Virus); standard agronomic equivalence
+Tomato leaf,Tomato — Healthy,MAPPED,Healthy tomato leaf — no disease indicators
+Tomato mold leaf,Tomato — Leaf Mold,MAPPED,Exact disease match — Passalora fulva (leaf mold)
+Tomato two spotted spider mites leaf,Tomato — Spider Mites / Two-Spotted Spider Mite,MAPPED,Exact disease match — Tetranychus urticae
+grape leaf black rot,Grape — Black Rot,MAPPED,Exact disease match — Guignardia bidwellii
+grape leaf,Grape — Healthy,MAPPED,Healthy grape leaf

@@ -1,0 +1,342 @@
+{
+  "grand_total_images": 2524,
+  "grand_total_corrupted": 0,
+  "unmapped_folders": [],
+  "agrismart_classes_covered_in_test": 27,
+  "splits": {
+    "train": {
+      "Apple leaf": {
+        "count": 78,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Healthy"
+      },
+      "Apple rust leaf": {
+        "count": 77,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Cedar Apple Rust"
+      },
+      "Apple Scab Leaf": {
+        "count": 80,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Apple Scab"
+      },
+      "Bell_pepper leaf": {
+        "count": 52,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Bell Pepper \u2014 Healthy"
+      },
+      "Bell_pepper leaf spot": {
+        "count": 58,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Bell Pepper \u2014 Bacterial Spot"
+      },
+      "Blueberry leaf": {
+        "count": 102,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Blueberry \u2014 Healthy"
+      },
+      "Cherry leaf": {
+        "count": 46,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Cherry \u2014 Healthy"
+      },
+      "Corn Gray leaf spot": {
+        "count": 63,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Cercospora Leaf Spot / Gray Leaf Spot"
+      },
+      "Corn leaf blight": {
+        "count": 176,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Northern Leaf Blight"
+      },
+      "Corn rust leaf": {
+        "count": 103,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Common Rust"
+      },
+      "grape leaf": {
+        "count": 53,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Grape \u2014 Healthy"
+      },
+      "grape leaf black rot": {
+        "count": 55,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Grape \u2014 Black Rot"
+      },
+      "Peach leaf": {
+        "count": 102,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Peach \u2014 Healthy"
+      },
+      "Potato leaf early blight": {
+        "count": 107,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Potato \u2014 Early Blight"
+      },
+      "Potato leaf late blight": {
+        "count": 97,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Potato \u2014 Late Blight"
+      },
+      "Raspberry leaf": {
+        "count": 112,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Raspberry \u2014 Healthy"
+      },
+      "Soyabean leaf": {
+        "count": 55,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Soybean \u2014 Healthy"
+      },
+      "Squash Powdery mildew leaf": {
+        "count": 122,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Squash \u2014 Powdery Mildew"
+      },
+      "Strawberry leaf": {
+        "count": 84,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Strawberry \u2014 Healthy"
+      },
+      "Tomato Early blight leaf": {
+        "count": 79,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Early Blight"
+      },
+      "Tomato leaf": {
+        "count": 54,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Healthy"
+      },
+      "Tomato leaf bacterial spot": {
+        "count": 99,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Bacterial Spot"
+      },
+      "Tomato leaf late blight": {
+        "count": 100,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Late Blight"
+      },
+      "Tomato leaf mosaic virus": {
+        "count": 44,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Tomato Mosaic Virus"
+      },
+      "Tomato leaf yellow virus": {
+        "count": 69,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Tomato Yellow Leaf Curl Virus"
+      },
+      "Tomato mold leaf": {
+        "count": 82,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Leaf Mold"
+      },
+      "Tomato Septoria leaf spot": {
+        "count": 140,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Septoria Leaf Spot"
+      },
+      "Tomato two spotted spider mites leaf": {
+        "count": 2,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Spider Mites / Two-Spotted Spider Mite"
+      }
+    },
+    "test": {
+      "Apple leaf": {
+        "count": 9,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Healthy"
+      },
+      "Apple rust leaf": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Cedar Apple Rust"
+      },
+      "Apple Scab Leaf": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Apple \u2014 Apple Scab"
+      },
+      "Bell_pepper leaf": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Bell Pepper \u2014 Healthy"
+      },
+      "Bell_pepper leaf spot": {
+        "count": 9,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Bell Pepper \u2014 Bacterial Spot"
+      },
+      "Blueberry leaf": {
+        "count": 11,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Blueberry \u2014 Healthy"
+      },
+      "Cherry leaf": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Cherry \u2014 Healthy"
+      },
+      "Corn Gray leaf spot": {
+        "count": 3,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Cercospora Leaf Spot / Gray Leaf Spot"
+      },
+      "Corn leaf blight": {
+        "count": 12,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Northern Leaf Blight"
+      },
+      "Corn rust leaf": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Corn \u2014 Common Rust"
+      },
+      "grape leaf": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Grape \u2014 Healthy"
+      },
+      "grape leaf black rot": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Grape \u2014 Black Rot"
+      },
+      "Peach leaf": {
+        "count": 9,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Peach \u2014 Healthy"
+      },
+      "Potato leaf early blight": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Potato \u2014 Early Blight"
+      },
+      "Potato leaf late blight": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Potato \u2014 Late Blight"
+      },
+      "Raspberry leaf": {
+        "count": 7,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Raspberry \u2014 Healthy"
+      },
+      "Soyabean leaf": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Soybean \u2014 Healthy"
+      },
+      "Squash Powdery mildew leaf": {
+        "count": 6,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Squash \u2014 Powdery Mildew"
+      },
+      "Strawberry leaf": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Strawberry \u2014 Healthy"
+      },
+      "Tomato Early blight leaf": {
+        "count": 9,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Early Blight"
+      },
+      "Tomato leaf": {
+        "count": 8,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Healthy"
+      },
+      "Tomato leaf bacterial spot": {
+        "count": 9,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Bacterial Spot"
+      },
+      "Tomato leaf late blight": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Late Blight"
+      },
+      "Tomato leaf mosaic virus": {
+        "count": 10,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Tomato Mosaic Virus"
+      },
+      "Tomato leaf yellow virus": {
+        "count": 6,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Tomato Yellow Leaf Curl Virus"
+      },
+      "Tomato mold leaf": {
+        "count": 6,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Leaf Mold"
+      },
+      "Tomato Septoria leaf spot": {
+        "count": 11,
+        "corrupted": 0,
+        "corrupted_files": [],
+        "agrismart_class": "Tomato \u2014 Septoria Leaf Spot"
+      }
+    }
+  }
+}

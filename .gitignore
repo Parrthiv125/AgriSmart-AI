@@ -50,13 +50,15 @@ venv.bak/
 data/raw/
 data/processed/
 data/plantvillage/
+data/plantdoc/
 *.zip
 *.tar.gz
 *.tar
 
-# Evaluation outputs (generated — keep results/ tracked via git if small)
-evaluation/results/*.png
-evaluation/results/*.jpg
+# Evaluation outputs — track small JSON/PNG results in git
+# Large outputs excluded:
+# evaluation/results/*.png  <- tracking PNGs for confusion matrices
+# Keep all results/ tracked (they are small reference artifacts)
 
 # Logs and experiment tracking
 *.log
