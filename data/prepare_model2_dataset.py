@@ -1,16 +1,17 @@
 """
-AgriSmart AI — Model 2 Dataset Preparation
-===========================================
+AgriSmart AI — Model 2 Dataset Preparation & Content-Hash Deduplication
+========================================================================
 Prepares the combined dataset for Model 2 field-domain adaptation training:
   - PlantVillage Train + 80% PlantDoc Train -> data/processed_model2/train/
   - PlantVillage Val + 20% PlantDoc Val -> data/processed_model2/val/
   - PlantDoc TEST (data/plantdoc/test/) remains 100% UNTOUCHED and excluded.
   - PlantVillage TEST (data/processed/test/) remains 100% UNTOUCHED and excluded.
 
-Guarantees:
+Guarantees & Safety:
   - Seed = 42 for deterministic 80/20 PlantDoc train/val split.
-  - 0 file/image overlap across splits.
-  - Shortens extremely long PlantDoc filenames to prevent Windows MAX_PATH (260 char) errors.
+  - SHA256 Content-Hash Deduplication: Detects and excludes any image content
+    that matches locked test sets (PlantDoc TEST / PlantVillage TEST) byte-for-byte.
+  - Shortens extremely long PlantDoc filenames to prevent Windows MAX_PATH errors.
   - Saves metadata payload with counts and leakage-check results to data/model2_split_stats.json.
 
 Usage:
@@ -63,6 +64,15 @@ def make_safe_filename(prefix: str, original_name: str) -> str:
     return f"{prefix}_{stem}{ext}"
 
 
+def compute_file_sha256(file_path: Path) -> str:
+    """Compute SHA256 hash of raw file bytes for content-level duplicate detection."""
+    hasher = hashlib.sha256()
+    with open(file_path, "rb") as f:
+        while chunk := f.read(65536):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 def copy_or_link(src: Path, dst: Path):
     if dst.exists():
         return
@@ -75,7 +85,7 @@ def copy_or_link(src: Path, dst: Path):
 
 def prepare_model2_dataset():
     print("=" * 70)
-    print(" AGRISMART AI — Model 2 Dataset Preparation")
+    print(" AGRISMART AI — Model 2 Dataset Preparation & Deduplication")
     print("=" * 70)
     print(f"Seed:               {SEED}")
     print(f"PlantVillage Train: {PV_TRAIN_DIR}")
@@ -111,12 +121,25 @@ def prepare_model2_dataset():
         (MODEL2_TRAIN_DIR / cls_name).mkdir(parents=True, exist_ok=True)
         (MODEL2_VAL_DIR / cls_name).mkdir(parents=True, exist_ok=True)
 
+    # Build locked test content hashes
+    print("[0/3] Indexing locked test set image content hashes (SHA256)...")
+    locked_test_hashes = set()
+
+    for test_dir in [PD_TEST_DIR, PV_TEST_DIR]:
+        if test_dir.exists():
+            for img_file in test_dir.rglob("*"):
+                if img_file.is_file() and img_file.suffix.lower() in IMG_EXTS:
+                    locked_test_hashes.add(compute_file_sha256(img_file))
+
+    print(f"[OK] Indexed {len(locked_test_hashes)} unique locked test set content hashes.")
+
     counts = {
         "train": {"plantvillage": defaultdict(int), "plantdoc": defaultdict(int)},
         "val": {"plantvillage": defaultdict(int), "plantdoc": defaultdict(int)},
     }
     manifest = []
     copy_tasks = []
+    excluded_duplicates = []
 
     # 1. Process PlantVillage Train
     print("[1/3] Gathering PlantVillage Train samples...")
@@ -124,6 +147,11 @@ def prepare_model2_dataset():
         if cls_folder.is_dir() and cls_folder.name in sanitized_classes:
             for img in sorted(cls_folder.iterdir()):
                 if img.suffix.lower() in IMG_EXTS:
+                    img_hash = compute_file_sha256(img)
+                    if img_hash in locked_test_hashes:
+                        excluded_duplicates.append({"path": str(img), "class": cls_folder.name, "reason": "PlantVillage TEST content match"})
+                        continue
+
                     dst_filename = make_safe_filename("pv", img.name)
                     dst_path = MODEL2_TRAIN_DIR / cls_folder.name / dst_filename
                     copy_tasks.append((img, dst_path))
@@ -134,6 +162,7 @@ def prepare_model2_dataset():
                         "split": "train",
                         "domain": "plantvillage",
                         "class": cls_folder.name,
+                        "sha256": img_hash,
                     })
 
     # 2. Process PlantVillage Val
@@ -142,6 +171,11 @@ def prepare_model2_dataset():
         if cls_folder.is_dir() and cls_folder.name in sanitized_classes:
             for img in sorted(cls_folder.iterdir()):
                 if img.suffix.lower() in IMG_EXTS:
+                    img_hash = compute_file_sha256(img)
+                    if img_hash in locked_test_hashes:
+                        excluded_duplicates.append({"path": str(img), "class": cls_folder.name, "reason": "PlantVillage TEST content match"})
+                        continue
+
                     dst_filename = make_safe_filename("pv", img.name)
                     dst_path = MODEL2_VAL_DIR / cls_folder.name / dst_filename
                     copy_tasks.append((img, dst_path))
@@ -152,10 +186,11 @@ def prepare_model2_dataset():
                         "split": "val",
                         "domain": "plantvillage",
                         "class": cls_folder.name,
+                        "sha256": img_hash,
                     })
 
     # 3. Process PlantDoc Train (80/20 split using seed 42)
-    print(f"[3/3] Splitting PlantDoc Train (80/20, seed={SEED})...")
+    print(f"[3/3] Splitting PlantDoc Train (80/20, seed={SEED}) & Deduplicating...")
     rng = random.Random(SEED)
     missing_classes_pd = []
 
@@ -179,6 +214,12 @@ def prepare_model2_dataset():
         pd_val_imgs = images[n_train:]
 
         for img in pd_train_imgs:
+            img_hash = compute_file_sha256(img)
+            if img_hash in locked_test_hashes:
+                excluded_duplicates.append({"path": str(img), "class": cls_name, "reason": "PlantDoc TEST content match"})
+                print(f"  [!] Excluded content duplicate from PlantDoc train: {img.name}")
+                continue
+
             dst_filename = make_safe_filename("pd", img.name)
             dst_path = MODEL2_TRAIN_DIR / cls_name / dst_filename
             copy_tasks.append((img, dst_path))
@@ -189,9 +230,16 @@ def prepare_model2_dataset():
                 "split": "train",
                 "domain": "plantdoc",
                 "class": cls_name,
+                "sha256": img_hash,
             })
 
         for img in pd_val_imgs:
+            img_hash = compute_file_sha256(img)
+            if img_hash in locked_test_hashes:
+                excluded_duplicates.append({"path": str(img), "class": cls_name, "reason": "PlantDoc TEST content match"})
+                print(f"  [!] Excluded content duplicate from PlantDoc val: {img.name}")
+                continue
+
             dst_filename = make_safe_filename("pd", img.name)
             dst_path = MODEL2_VAL_DIR / cls_name / dst_filename
             copy_tasks.append((img, dst_path))
@@ -202,10 +250,8 @@ def prepare_model2_dataset():
                 "split": "val",
                 "domain": "plantdoc",
                 "class": cls_name,
+                "sha256": img_hash,
             })
-
-    if missing_classes_pd:
-        print(f"  [!] Note: {len(missing_classes_pd)} classes have 0 PlantDoc train images (e.g. Spider Mites).")
 
     # Execute file copy/link operations
     print(f"\nExecuting {len(copy_tasks)} file operations in parallel...")
@@ -213,38 +259,33 @@ def prepare_model2_dataset():
         list(executor.map(lambda t: copy_or_link(*t), copy_tasks))
     print("[OK] File operations complete.")
 
-    # 4. Leakage Verification
+    # 4. Content-Level Leakage Verification
     print("\n" + "=" * 70)
-    print(" LEAKAGE VERIFICATION")
+    print(" CONTENT-LEVEL SHA256 LEAKAGE VERIFICATION")
     print("=" * 70)
 
-    train_files = {f.name for f in MODEL2_TRAIN_DIR.rglob("*") if f.is_file()}
-    val_files = {f.name for f in MODEL2_VAL_DIR.rglob("*") if f.is_file()}
+    train_hashes = {item["sha256"] for item in manifest if item["split"] == "train"}
+    val_hashes = {item["sha256"] for item in manifest if item["split"] == "val"}
 
-    pd_test_files = {f.name for f in PD_TEST_DIR.rglob("*") if f.is_file()} if PD_TEST_DIR.exists() else set()
-    pv_test_files = {f.name for f in PV_TEST_DIR.rglob("*") if f.is_file()} if PV_TEST_DIR.exists() else set()
-
-    # Track original stems for complete leakage protection check
-    train_orig_stems = {item["original_filename"] for item in manifest if item["split"] == "train"}
-    val_orig_stems = {item["original_filename"] for item in manifest if item["split"] == "val"}
+    train_val_hash_overlap = len(train_hashes & val_hashes)
+    train_test_hash_overlap = len(train_hashes & locked_test_hashes)
+    val_test_hash_overlap = len(val_hashes & locked_test_hashes)
 
     leakage_checks = {
-        "train_vs_val_overlap": len(train_files & val_files),
-        "train_vs_plantdoc_test_overlap": len(train_orig_stems & pd_test_files),
-        "val_vs_plantdoc_test_overlap": len(val_orig_stems & pd_test_files),
-        "train_vs_plantvillage_test_overlap": len(train_orig_stems & pv_test_files),
-        "val_vs_plantvillage_test_overlap": len(val_orig_stems & pv_test_files),
+        "train_vs_val_content_overlap": train_val_hash_overlap,
+        "train_vs_test_content_overlap": train_test_hash_overlap,
+        "val_vs_test_content_overlap": val_test_hash_overlap,
     }
 
     all_passed = True
     for check_name, count in leakage_checks.items():
-        status = "PASSED (0 overlap)" if count == 0 else f"FAILED ({count} overlapping files!)"
+        status = "PASSED (0 content overlap)" if count == 0 else f"FAILED ({count} content overlaps!)"
         print(f"  {check_name:<40}: {status}")
         if count != 0:
             all_passed = False
 
     if not all_passed:
-        print("\n[CRITICAL ERROR] Leakage detected! Stopping immediately.")
+        print("\n[CRITICAL ERROR] Content leakage detected! Stopping immediately.")
         sys.exit(1)
 
     # 5. Summary & Save Stats
@@ -259,10 +300,11 @@ def prepare_model2_dataset():
     print("\n" + "=" * 70)
     print(" MODEL 2 DATA SPLIT SUMMARY")
     print("=" * 70)
-    print(f"  TRAIN SET TOTAL:      {grand_total_train:>6}  (PlantVillage: {total_pv_train}, PlantDoc: {total_pd_train})")
-    print(f"  VAL SET TOTAL:        {grand_total_val:>6}  (PlantVillage: {total_pv_val}, PlantDoc: {total_pd_val})")
-    print(f"  LOCKED PlantDoc TEST: {len(pd_test_files):>6}  (UNTOUCHED)")
-    print(f"  LOCKED PlantVillage TEST: {len(pv_test_files):>6} (UNTOUCHED)")
+    print(f"  TRAIN SET TOTAL:         {grand_total_train:>6}  (PlantVillage: {total_pv_train}, PlantDoc: {total_pd_train})")
+    print(f"  VAL SET TOTAL:           {grand_total_val:>6}  (PlantVillage: {total_pv_val}, PlantDoc: {total_pd_val})")
+    print(f"  EXCLUDED DUPLICATES:     {len(excluded_duplicates):>6}")
+    print(f"  LOCKED PlantDoc TEST:    {len(list(PD_TEST_DIR.rglob('*'))) if PD_TEST_DIR.exists() else 0:>6}  (UNTOUCHED)")
+    print(f"  LOCKED PlantVillage TEST: {len(list(PV_TEST_DIR.rglob('*'))) if PV_TEST_DIR.exists() else 0:>6} (UNTOUCHED)")
     print("=" * 70)
 
     stats_payload = {
@@ -270,6 +312,8 @@ def prepare_model2_dataset():
         "split_seed": SEED,
         "class_names": class_names,
         "sanitized_classes": sanitized_classes,
+        "excluded_duplicates_count": len(excluded_duplicates),
+        "excluded_duplicates": excluded_duplicates,
         "counts": {
             "train": {
                 "total": grand_total_train,
@@ -284,10 +328,6 @@ def prepare_model2_dataset():
                 "plantdoc_total": total_pd_val,
                 "per_class_plantvillage": dict(counts["val"]["plantvillage"]),
                 "per_class_plantdoc": dict(counts["val"]["plantdoc"]),
-            },
-            "locked_tests": {
-                "plantdoc_test_total": len(pd_test_files),
-                "plantvillage_test_total": len(pv_test_files),
             },
         },
         "leakage_checks": leakage_checks,

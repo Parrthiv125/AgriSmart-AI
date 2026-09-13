@@ -59,6 +59,7 @@ data/model2_manifest.json
 
 # Allow notebooks specifically
 !notebooks/AgriSmart_Model2_Field_Adaptation.ipynb
+!notebooks/AgriSmart_Model2_AutoTrain_v2.ipynb
 
 # Large files / model weights
 # (use GitHub Releases or cloud storage for model weights > 100 MB)

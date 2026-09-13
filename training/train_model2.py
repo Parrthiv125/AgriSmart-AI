@@ -268,61 +268,94 @@ def run_training_model2(
 
     print(f"[OK] DataLoaders built: Train={len(train_dataset)} | Val={len(val_dataset)} | Classes={num_classes}")
 
-    # Load Model 1 weights
-    model, base_ckpt_desc = load_model1_weights(model1_path, num_classes, device)
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-    scaler = GradScaler("cuda" if torch.cuda.is_available() else "cpu", enabled=True)
-
+    # Load Model 1 weights or resume from Model 2 last checkpoint
+    start_epoch = 0
     best_val_f1 = 0.0
     best_epoch = 0
+
+    criterion = nn.CrossEntropyLoss()
+
+    if MODEL2_LAST_OUT.exists() and not is_dry_run:
+        print(f"[RESUME] Found existing last checkpoint at {MODEL2_LAST_OUT.name}")
+        ckpt_last = torch.load(MODEL2_LAST_OUT, map_location=device, weights_only=False)
+        model = timm.create_model("efficientnet_b2", pretrained=False, num_classes=num_classes)
+        model.load_state_dict(ckpt_last["state_dict"])
+        model.to(device)
+        start_epoch = ckpt_last.get("epoch", 0)
+        best_val_f1 = ckpt_last.get("best_val_f1", 0.0)
+        best_epoch = ckpt_last.get("best_epoch", 0)
+        base_ckpt_desc = f"Resumed from {MODEL2_LAST_OUT.name} (epoch {start_epoch})"
+
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, last_epoch=start_epoch - 1 if start_epoch > 0 else -1)
+        scaler = GradScaler("cuda" if torch.cuda.is_available() else "cpu", enabled=True)
+
+        if "optimizer_state" in ckpt_last:
+            optimizer.load_state_dict(ckpt_last["optimizer_state"])
+        if "scheduler_state" in ckpt_last:
+            scheduler.load_state_dict(ckpt_last["scheduler_state"])
+        print(f"[OK] Successfully resumed from epoch {start_epoch}. Continuing to epoch {epochs}...")
+    else:
+        model, base_ckpt_desc = load_model1_weights(model1_path, num_classes, device)
+        optimizer = optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
+        scaler = GradScaler("cuda" if torch.cuda.is_available() else "cpu", enabled=True)
+
     experiment_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     num_epochs_to_run = 1 if is_dry_run else epochs
 
-    print(f"\n[RUN] Training Model 2...")
-    for epoch in range(num_epochs_to_run):
-        t0 = time.time()
-        train_loss, train_f1, train_acc = train_one_epoch(
-            model, train_loader, criterion, optimizer, scaler, device, epoch, is_dry_run
-        )
-        val_loss, val_f1, val_acc = validate(
-            model, val_loader, criterion, device, is_dry_run
-        )
-        elapsed = time.time() - t0
+    if start_epoch >= num_epochs_to_run and not is_dry_run:
+        print(f"[OK] Training already complete ({start_epoch}/{num_epochs_to_run} epochs). Skipping training.")
+    else:
+        print(f"\n[RUN] Training Model 2 from epoch {start_epoch + 1} to {num_epochs_to_run}...")
+        for epoch in range(start_epoch, num_epochs_to_run):
+            t0 = time.time()
+            train_loss, train_f1, train_acc = train_one_epoch(
+                model, train_loader, criterion, optimizer, scaler, device, epoch, is_dry_run
+            )
+            val_loss, val_f1, val_acc = validate(
+                model, val_loader, criterion, device, is_dry_run
+            )
+            elapsed = time.time() - t0
 
-        scheduler.step()
-        current_lr = optimizer.param_groups[0]["lr"]
+            scheduler.step()
+            current_lr = optimizer.param_groups[0]["lr"]
 
-        print(
-            f"Epoch {epoch+1:03d}/{num_epochs_to_run} | "
-            f"Train Loss: {train_loss:.4f} F1: {train_f1:.4f} Acc: {train_acc:.4f} | "
-            f"Val Loss: {val_loss:.4f} F1: {val_f1:.4f} Acc: {val_acc:.4f} | "
-            f"LR: {current_lr:.2e} | {elapsed:.1f}s"
-        )
+            print(
+                f"Epoch {epoch+1:03d}/{num_epochs_to_run} | "
+                f"Train Loss: {train_loss:.4f} F1: {train_f1:.4f} Acc: {train_acc:.4f} | "
+                f"Val Loss: {val_loss:.4f} F1: {val_f1:.4f} Acc: {val_acc:.4f} | "
+                f"LR: {current_lr:.2e} | {elapsed:.1f}s"
+            )
 
-        # Save best model
-        if val_f1 > best_val_f1 or is_dry_run:
-            best_val_f1 = val_f1
-            best_epoch = epoch + 1
+            # Save best model
+            if val_f1 > best_val_f1 or is_dry_run:
+                best_val_f1 = val_f1
+                best_epoch = epoch + 1
+                torch.save({
+                    "epoch": best_epoch,
+                    "model_name": "efficientnet_b2",
+                    "num_classes": num_classes,
+                    "class_names": class_names,
+                    "image_size": IMAGE_SIZE,
+                    "state_dict": model.state_dict(),
+                    "optimizer_state": optimizer.state_dict(),
+                    "val_macro_f1": val_f1,
+                    "val_accuracy": val_acc,
+                    "base_checkpoint": base_ckpt_desc,
+                    "plantdoc_oversample_factor": plantdoc_oversample_factor,
+                }, model2_out_path)
+                print(f"   [OK] Model 2 best checkpoint saved -> {model2_out_path.name}")
+
+            # Save last checkpoint for resume support
             torch.save({
-                "epoch": best_epoch,
-                "model_name": "efficientnet_b2",
-                "num_classes": num_classes,
-                "class_names": class_names,
-                "image_size": IMAGE_SIZE,
+                "epoch": epoch + 1,
                 "state_dict": model.state_dict(),
                 "optimizer_state": optimizer.state_dict(),
-                "val_macro_f1": val_f1,
-                "val_accuracy": val_acc,
-                "base_checkpoint": base_ckpt_desc,
-                "plantdoc_oversample_factor": plantdoc_oversample_factor,
-            }, model2_out_path)
-            print(f"   [OK] Model 2 best checkpoint saved -> {model2_out_path.name}")
-
-        # Save last checkpoint
-        torch.save({"epoch": epoch + 1, "state_dict": model.state_dict()}, MODEL2_LAST_OUT)
+                "scheduler_state": scheduler.state_dict(),
+                "best_val_f1": best_val_f1,
+                "best_epoch": best_epoch,
+            }, MODEL2_LAST_OUT)
 
         # Log
         log_experiment_model2({
