@@ -71,6 +71,10 @@ models/*.pt
 # Logs and experiment tracking / scratch
 *.log
 experiments/
+experiments_model2.csv
+models/agrismart_field_adapted_metadata.json
+models/agrismart_field_adapted_last.pth
+models/agrismart_field_adapted_best.pth
 mlruns/
 wandb/
 runs/
