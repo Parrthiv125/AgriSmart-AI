@@ -209,6 +209,9 @@ def prepare_plantdoc():
             for split in ["train", "test"]
         },
     }
+    stats_payload["counts"] = stats_payload["splits"]
+    stats_payload["train"] = stats_payload["splits"]["train"]
+    stats_payload["test"] = stats_payload["splits"]["test"]
 
     with open(STATS_OUT, "w", encoding="utf-8") as f:
         json.dump(stats_payload, f, indent=2)
@@ -222,5 +225,9 @@ def prepare_plantdoc():
     return stats_payload
 
 
+prepare_plantdoc_dataset = prepare_plantdoc
+
+
 if __name__ == "__main__":
     prepare_plantdoc()
+
