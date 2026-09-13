@@ -49,16 +49,22 @@ venv.bak/
 # Dataset (do NOT commit raw data)
 data/raw/
 data/processed/
+data/processed_model2/
 data/plantvillage/
 data/plantdoc/
+data/model2_manifest.json
 *.zip
 *.tar.gz
 *.tar
 
-# Evaluation outputs — track small JSON/PNG results in git
-# Large outputs excluded:
-# evaluation/results/*.png  <- tracking PNGs for confusion matrices
-# Keep all results/ tracked (they are small reference artifacts)
+# Allow notebooks specifically
+!notebooks/AgriSmart_Model2_Field_Adaptation.ipynb
+
+# Large files / model weights
+# (use GitHub Releases or cloud storage for model weights > 100 MB)
+models/*.pth
+models/*.pt
+!models/agrismart_best.pth
 
 # Logs and experiment tracking
 *.log
@@ -67,16 +73,12 @@ mlruns/
 wandb/
 runs/
 
-# OS
+# OS & IDE
 .DS_Store
 Thumbs.db
 desktop.ini
-
-# IDE
 .vscode/
 .idea/
-*.sublime-project
-*.sublime-workspace
 
 # Environment / secrets
 .env
@@ -85,24 +87,4 @@ config/secrets.yaml
 config/secrets.json
 *_secret*
 *_key*
-
-# Frontend build artifacts
-frontend/node_modules/
-frontend/.next/
-frontend/dist/
-frontend/build/
-frontend/.cache/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-*.swp
-*.swo
-
-# Large files / model weights
-# (use GitHub Releases or cloud storage for model weights > 100 MB)
-models/*.pth
-models/*.pt
-!models/agrismart_best.pth
 
