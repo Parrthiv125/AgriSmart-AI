@@ -158,5 +158,17 @@ def download_plantvillage():
     return stats
 
 
+def download_and_extract_plantvillage() -> Path:
+    """
+    Public API: Downloads PlantVillage automatically, uses fast system unzip,
+    extracts only raw/color, is idempotent, automatically detects RGB color
+    directory, and returns the Path to the raw color directory.
+    """
+    stats = download_plantvillage()
+    active_path = ROOT / stats["active_rgb_dir"]
+    return active_path
+
+
 if __name__ == "__main__":
     download_plantvillage()
+
