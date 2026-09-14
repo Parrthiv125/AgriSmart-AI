@@ -1,20 +1,32 @@
 """
 AgriSmart AI — FastAPI Backend
 ================================
-Endpoints:
-  GET  /health     — Service health check
-  POST /predict    — Disease prediction from uploaded image
-  POST /explain    — Grad-CAM heatmap generation (optional)
+Entry point for the production backend.
 
-Run with:
+Start the server:
     uvicorn backend.main:app --reload --port 8000
-    or from project root:
-    uvicorn main:app --reload  (from inside backend/)
+    (from the project root: c:\\SIH 2\\AgriSmart-AI-main)
+
+Or run directly:
+    python backend/main.py
+
+Architecture:
+    POST /predict
+        -> image validation (this file)
+        -> disease_service.predict_disease()
+        -> agrismart_final.pth (EfficientNet-B2, 28 classes)
+        -> structured JSON response
+
+Model loading lives exclusively in backend/services/disease_service.py.
+No inference code belongs in this file.
 """
+
+from __future__ import annotations
 
 import io
 import sys
-import base64
+import logging
+import tempfile
 import traceback
 from pathlib import Path
 from typing import Optional
@@ -22,196 +34,267 @@ from typing import Optional
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
-from PIL import Image
+from pydantic import BaseModel, Field
+from PIL import Image, UnidentifiedImageError
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from inference.predict import predict, load_model
-from training.config import BEST_MODEL_PATH
+# ── Path setup ─────────────────────────────────────────────────────────────────
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
-# ── App Initialisation ────────────────────────────────────────────────────────
+from backend.services.disease_service import predict_disease, warm_up
 
+# ── Logging ────────────────────────────────────────────────────────────────────
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("agrismart")
+
+# ── CORS origins ───────────────────────────────────────────────────────────────
+# Configure for local dev + any known deployed frontend origins.
+# Do NOT use ["*"] in production — add your deployed frontend URL here.
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",    # React / Next.js dev server
+    "http://localhost:5173",    # Vite dev server
+    "http://localhost:8080",    # Generic local frontend
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8080",
+]
+
+# ── Constraints ────────────────────────────────────────────────────────────────
+MAX_FILE_SIZE_MB = 10
+ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff"}
+
+# ── App ────────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="AgriSmart AI",
-    description="Crop disease detection API — Upload a leaf image, get a disease prediction.",
-    version="1.0.0",
+    description=(
+        "Crop disease detection API. Upload a leaf image to receive a disease "
+        "prediction from a 28-class EfficientNet-B2 model trained on PlantVillage "
+        "and PlantDoc field imagery.\n\n"
+        "**Model**: `models/agrismart_final.pth`\n"
+        "**PlantDoc Field-Domain Macro F1**: 0.3650\n"
+        "**PlantVillage Macro F1**: 0.9986"
+    ),
+    version="2.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    openapi_url="/openapi.json",
 )
 
-# Allow all origins for hackathon development (restrict in production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
-# Preload model at startup for fast inference
+# ── Startup / Shutdown ─────────────────────────────────────────────────────────
 _model_ready = False
 
 @app.on_event("startup")
 async def startup_event():
     global _model_ready
     try:
-        load_model(BEST_MODEL_PATH)
+        warm_up()
         _model_ready = True
-        print("✅ AgriSmart AI model loaded successfully.")
-    except FileNotFoundError:
-        print("⚠️  Model weights not found. Train the model first: python training/train.py")
+        log.info("AgriSmart AI model loaded successfully.")
+    except FileNotFoundError as e:
+        log.error(f"Model file not found: {e}")
+        _model_ready = False
+    except Exception as e:
+        log.error(f"Unexpected error loading model: {e}")
         _model_ready = False
 
 
-# ── Schemas ───────────────────────────────────────────────────────────────────
+# ── Response models ────────────────────────────────────────────────────────────
 
-class PredictionResult(BaseModel):
-    disease: str
-    confidence: float
-    confidence_pct: str
-    confidence_level: str
-    precaution: str
-    low_confidence_warning: Optional[str]
-    top_predictions: list
+class TopKPrediction(BaseModel):
+    display_name: str = Field(..., example="Tomato — Early Blight")
+    crop: str         = Field(..., example="Tomato")
+    disease: str      = Field(..., example="Early Blight")
+    confidence: float = Field(..., ge=0.0, le=1.0, example=0.9123)
+    class_index: int  = Field(..., ge=0, lt=28, example=20)
+
+
+class PredictionResponse(BaseModel):
+    success: bool       = Field(True, example=True)
+    crop: str           = Field(..., example="Tomato")
+    disease: str        = Field(..., example="Early Blight")
+    display_name: str   = Field(..., example="Tomato — Early Blight")
+    confidence: float   = Field(..., ge=0.0, le=1.0, example=0.9123)
+    class_index: int    = Field(..., ge=0, lt=28, example=20)
+    disease_id: str     = Field(..., example="tomato_early_blight")
+    top_k: list[TopKPrediction]
 
 
 class HealthResponse(BaseModel):
-    status: str
-    model_loaded: bool
-    message: str
+    status: str        = Field(..., example="ok")
+    model_loaded: bool = Field(..., example=True)
+    model_path: str    = Field(..., example="models/agrismart_final.pth")
+    num_classes: int   = Field(28, example=28)
+    version: str       = Field("2.0.0", example="2.0.0")
 
 
-# ── Utility ───────────────────────────────────────────────────────────────────
+class ErrorResponse(BaseModel):
+    success: bool = Field(False, example=False)
+    error: str    = Field(..., example="Could not decode image")
+    detail: Optional[str] = None
 
-MAX_FILE_SIZE_MB = 10
 
-async def read_image_from_upload(file: UploadFile) -> Image.Image:
-    """Read and validate an uploaded image file."""
-    # Check content type
-    if file.content_type not in ("image/jpeg", "image/png", "image/webp", "image/bmp"):
+# ── Image validation helper ────────────────────────────────────────────────────
+
+async def validate_and_open_image(file: UploadFile) -> tuple[Image.Image, bytes]:
+    """
+    Read upload, enforce size and type limits, decode image.
+    Raises HTTPException on any failure — never substitutes a fake image.
+    """
+    # Empty file guard
+    if file.filename == "" or file.filename is None:
+        raise HTTPException(status_code=400, detail="No file uploaded.")
+
+    # Content-type guard (best-effort; not a security boundary)
+    if file.content_type and file.content_type not in ALLOWED_CONTENT_TYPES:
         raise HTTPException(
-            status_code=415,
-            detail=f"Unsupported image type: {file.content_type}. Use JPEG or PNG."
+            status_code=400,
+            detail=(
+                f"Unsupported content type: '{file.content_type}'. "
+                f"Accepted: JPEG, PNG, WebP, BMP, TIFF."
+            ),
         )
 
-    # Read bytes
-    contents = await file.read()
+    raw = await file.read()
 
-    # Check file size
-    if len(contents) > MAX_FILE_SIZE_MB * 1024 * 1024:
+    if len(raw) == 0:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    if len(raw) > MAX_FILE_SIZE_MB * 1024 * 1024:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE_MB} MB."
+            detail=f"File too large ({len(raw) // 1024 // 1024} MB). Maximum: {MAX_FILE_SIZE_MB} MB.",
         )
 
-    # Try to open
     try:
-        img = Image.open(io.BytesIO(contents)).convert("RGB")
-    except Exception:
-        raise HTTPException(status_code=422, detail="Could not decode image. Please upload a valid image file.")
+        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        # Force decode to catch lazy-load failures
+        img.load()
+    except UnidentifiedImageError:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot identify image file. Upload a valid JPEG, PNG, WebP, or BMP image.",
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Failed to decode image: {e}",
+        )
 
-    return img
+    return img, raw
 
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
+# ── Endpoints ──────────────────────────────────────────────────────────────────
 
-@app.get("/health", response_model=HealthResponse, tags=["System"])
+@app.get(
+    "/health",
+    response_model=HealthResponse,
+    tags=["System"],
+    summary="Health check",
+)
 async def health_check():
-    """Returns service health and model status."""
-    if _model_ready:
-        return HealthResponse(
-            status="ok",
-            model_loaded=True,
-            message="AgriSmart AI is ready to predict crop diseases.",
-        )
-    else:
-        return HealthResponse(
-            status="degraded",
-            model_loaded=False,
-            message="Model weights not loaded. Train the model first.",
-        )
+    """Returns service health and model load status."""
+    return HealthResponse(
+        status="ok" if _model_ready else "degraded",
+        model_loaded=_model_ready,
+        model_path="models/agrismart_final.pth",
+        num_classes=28,
+        version="2.0.0",
+    )
 
 
-@app.post("/predict", response_model=PredictionResult, tags=["Disease Detection"])
-async def predict_disease(file: UploadFile = File(..., description="Leaf/crop image (JPEG or PNG)")):
+@app.post(
+    "/predict",
+    response_model=PredictionResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid or corrupt image"},
+        413: {"model": ErrorResponse, "description": "File too large"},
+        503: {"model": ErrorResponse, "description": "Model not loaded"},
+        500: {"model": ErrorResponse, "description": "Unexpected server error"},
+    },
+    tags=["Disease Detection"],
+    summary="Predict crop disease from a leaf image",
+)
+async def predict_endpoint(
+    file: UploadFile = File(..., description="Leaf / crop image (JPEG or PNG recommended)"),
+):
     """
-    Upload a leaf image and receive:
-    - Predicted disease class
-    - Confidence score
-    - Confidence level (High / Medium / Low)
-    - Precautionary guidance
-    - Top-3 alternative predictions
+    Upload a leaf image and receive a disease prediction.
+
+    **Request**: `multipart/form-data`, field name `file`.
+
+    **Response**:
+    - `crop` — detected crop (e.g. "Tomato")
+    - `disease` — detected disease (e.g. "Early Blight")
+    - `display_name` — full display name (e.g. "Tomato — Early Blight")
+    - `confidence` — model confidence in [0, 1]
+    - `class_index` — integer class index [0–27]
+    - `disease_id` — URL-safe disease identifier
+    - `top_k` — top-3 predictions with per-class confidence
+
+    The server/model determines all prediction values. The client supplies only the image.
     """
     if not _model_ready:
         raise HTTPException(
             status_code=503,
-            detail="Model not loaded. Please contact the administrator or train the model first."
+            detail="Model not loaded. Check server startup logs.",
         )
 
-    img = await read_image_from_upload(file)
+    # Validate and decode image in memory
+    img, raw_bytes = await validate_and_open_image(file)
 
+    # Write to a secure temp file for disease_service (which accepts file paths)
     try:
-        result = predict(img, top_k=3)
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
+        suffix = Path(file.filename or "upload.jpg").suffix or ".jpg"
+        with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+            tmp.write(raw_bytes)
+            tmp_path = Path(tmp.name)
 
-    return PredictionResult(
-        disease=result["class"],
+        result = predict_disease(tmp_path, top_k=3)
+
+    except (FileNotFoundError, UnidentifiedImageError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        log.error(f"Prediction failed: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {e}")
+    finally:
+        # Always clean up temp file
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except Exception:
+            pass
+
+    return PredictionResponse(
+        success=True,
+        crop=result["crop"],
+        disease=result["disease"],
+        display_name=result["display_name"],
         confidence=result["confidence"],
-        confidence_pct=f"{result['confidence']*100:.1f}%",
-        confidence_level=result["confidence_level"],
-        precaution=result["precaution"],
-        low_confidence_warning=result["low_confidence_warning"],
-        top_predictions=result["top_k"],
+        class_index=result["class_index"],
+        disease_id=result["disease_id"],
+        top_k=[TopKPrediction(**t) for t in result["top_k"]],
     )
 
 
-@app.post("/explain", tags=["Explainability"])
-async def explain_prediction(file: UploadFile = File(..., description="Leaf/crop image for Grad-CAM")):
-    """
-    Generate a Grad-CAM heatmap for model explainability.
-    Returns the prediction result + base64-encoded heatmap image.
-    """
-    if not _model_ready:
-        raise HTTPException(status_code=503, detail="Model not loaded.")
-
-    img = await read_image_from_upload(file)
-
-    try:
-        from backend.explainability import generate_gradcam
-        result = predict(img, top_k=1)
-        heatmap_b64 = generate_gradcam(img)
-
-        return JSONResponse({
-            "disease": result["class"],
-            "confidence": result["confidence"],
-            "confidence_level": result["confidence_level"],
-            "heatmap_base64": heatmap_b64,
-        })
-
-    except ImportError:
-        raise HTTPException(
-            status_code=501,
-            detail="Grad-CAM not yet available. Complete core training first."
-        )
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Explainability failed: {str(e)}")
-
-
-# ── Error Handlers ────────────────────────────────────────────────────────────
+# ── Global error handler ───────────────────────────────────────────────────────
 
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
+    log.error(f"Unhandled exception on {request.url}: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"error": "Internal server error", "detail": str(exc)},
+        content={"success": False, "error": "Internal server error", "detail": str(exc)},
     )
 
 
-# ── Dev Run ───────────────────────────────────────────────────────────────────
-
+# ── Dev run ────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
