@@ -95,3 +95,13 @@ config/secrets.json
 *_secret*
 *_key*
 
+# Frontend & Node
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env.local
+frontend/.env.*.local
+.oxlintcache
+tmp_frontend_clone/
+
