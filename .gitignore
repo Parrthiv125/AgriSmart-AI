@@ -67,14 +67,14 @@ data/model2_split_stats.json
 models/*.pth
 models/*.pt
 !models/agrismart_best.pth
+!models/agrismart_field_adapted_best.pth
 
 # Logs and experiment tracking / scratch
 *.log
 experiments/
-experiments_model2.csv
-models/agrismart_field_adapted_metadata.json
 models/agrismart_field_adapted_last.pth
-models/agrismart_field_adapted_best.pth
+!experiments_model2.csv
+!models/agrismart_field_adapted_metadata.json
 mlruns/
 wandb/
 runs/

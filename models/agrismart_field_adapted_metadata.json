@@ -1,0 +1,71 @@
+{
+  "model_label": "AgriSmart AI Model 2 -- Field-Domain Adaptation",
+  "timestamp": "2026-09-14T19:38:37.520677",
+  "architecture": "efficientnet_b2",
+  "image_size": 260,
+  "num_classes": 28,
+  "class_names": [
+    "Apple \u2014 Apple Scab",
+    "Apple \u2014 Cedar Apple Rust",
+    "Apple \u2014 Healthy",
+    "Bell Pepper \u2014 Bacterial Spot",
+    "Bell Pepper \u2014 Healthy",
+    "Blueberry \u2014 Healthy",
+    "Cherry \u2014 Healthy",
+    "Corn \u2014 Cercospora Leaf Spot / Gray Leaf Spot",
+    "Corn \u2014 Common Rust",
+    "Corn \u2014 Northern Leaf Blight",
+    "Grape \u2014 Black Rot",
+    "Grape \u2014 Healthy",
+    "Peach \u2014 Healthy",
+    "Potato \u2014 Early Blight",
+    "Potato \u2014 Late Blight",
+    "Raspberry \u2014 Healthy",
+    "Soybean \u2014 Healthy",
+    "Squash \u2014 Powdery Mildew",
+    "Strawberry \u2014 Healthy",
+    "Tomato \u2014 Bacterial Spot",
+    "Tomato \u2014 Early Blight",
+    "Tomato \u2014 Healthy",
+    "Tomato \u2014 Late Blight",
+    "Tomato \u2014 Leaf Mold",
+    "Tomato \u2014 Septoria Leaf Spot",
+    "Tomato \u2014 Spider Mites / Two-Spotted Spider Mite",
+    "Tomato \u2014 Tomato Mosaic Virus",
+    "Tomato \u2014 Tomato Yellow Leaf Curl Virus"
+  ],
+  "base_checkpoint": "models/agrismart_best.pth",
+  "output_checkpoint": "models/agrismart_field_adapted_best.pth",
+  "hyperparameters": {
+    "optimizer": "AdamW",
+    "scheduler": "CosineAnnealingLR",
+    "learning_rate": 0.0001,
+    "weight_decay": 0.0001,
+    "batch_size": 32,
+    "epochs": 25,
+    "seed": 42,
+    "amp_enabled": true
+  },
+  "sampling_strategy": {
+    "method": "WeightedRandomSampler",
+    "plantdoc_oversample_factor": 5.0,
+    "plantvillage_weight": 1.0,
+    "pv_train_samples": 30841,
+    "pd_train_samples": 1830
+  },
+  "dataset_split": {
+    "train_total": 32671,
+    "val_total": 4327,
+    "locked_plantdoc_test": 233
+  },
+  "training_results": {
+    "best_epoch": 17,
+    "best_val_macro_f1": 0.9555260064309874,
+    "is_dry_run": false
+  },
+  "guardrail_status": {
+    "model1_unmodified": true,
+    "plantdoc_test_untouched": true,
+    "plantdoc_test_evaluated": false
+  }
+}

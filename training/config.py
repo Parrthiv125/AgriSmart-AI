@@ -99,9 +99,11 @@ NORM_STD = [0.229, 0.224, 0.225]
 USE_CLASS_WEIGHTS = True
 
 # ── Output / Artifacts ──────────────────────────────────────────────────────
-BEST_MODEL_PATH = MODELS_DIR / "agrismart_best.pth"
-LAST_MODEL_PATH = MODELS_DIR / "agrismart_last.pth"
-EXPERIMENT_LOG = ROOT_DIR / "experiments.csv"
+MODEL1_BASELINE_PATH = MODELS_DIR / "agrismart_best.pth"
+MODEL2_FIELD_ADAPTED_PATH = MODELS_DIR / "agrismart_field_adapted_best.pth"
+BEST_MODEL_PATH = MODEL2_FIELD_ADAPTED_PATH if MODEL2_FIELD_ADAPTED_PATH.exists() else MODEL1_BASELINE_PATH
+LAST_MODEL_PATH = MODELS_DIR / "agrismart_field_adapted_last.pth"
+EXPERIMENT_LOG = ROOT_DIR / "experiments_model2.csv"
 
 # ── Confidence Thresholds ────────────────────────────────────────────────────
 CONFIDENCE_HIGH = 0.80

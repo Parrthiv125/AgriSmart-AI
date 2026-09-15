@@ -18,7 +18,9 @@ import timm
 ROOT_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
-MODEL_PATH = ROOT_DIR / "models" / "agrismart_best.pth"
+MODEL2_PATH = ROOT_DIR / "models" / "agrismart_field_adapted_best.pth"
+MODEL1_PATH = ROOT_DIR / "models" / "agrismart_best.pth"
+MODEL_PATH = MODEL2_PATH if MODEL2_PATH.exists() else MODEL1_PATH
 CLASSES_JSON_PATH = ROOT_DIR / "models" / "classes.json"
 
 
