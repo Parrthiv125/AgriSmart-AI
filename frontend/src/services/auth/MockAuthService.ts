@@ -1,25 +1,58 @@
 import { AuthService } from './AuthService';
 import { AuthSession, LoginCredentials, RegisterData, User } from '../../types/auth';
+import {
+  ACTIVE_SESSION_TOKEN_KEY,
+  getStableUserId,
+  getUserProfileStorageKey,
+  getActiveUserId,
+  setActiveUserSession,
+  clearActiveUserSession
+} from './userStorage';
 
 export class MockAuthService implements AuthService {
   private currentUser: User | null = null;
   private sessionToken: string | null = null;
 
   constructor() {
-    // Purge any legacy mock user data
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.removeItem('agrismart_mock_user');
 
-      // Check if real authenticated session exists in storage
-      const savedProfile = localStorage.getItem('agrismart_user_profile');
-      const savedToken = localStorage.getItem('agrismart_token');
-      if (savedProfile && savedToken) {
-        try {
-          this.currentUser = JSON.parse(savedProfile);
-          this.sessionToken = savedToken;
-        } catch {
-          this.currentUser = null;
-          this.sessionToken = null;
+      // Check if real authenticated active session exists in storage
+      const activeUserId = getActiveUserId();
+      const savedToken = localStorage.getItem(ACTIVE_SESSION_TOKEN_KEY);
+
+      if (activeUserId && savedToken) {
+        const profileKey = getUserProfileStorageKey(activeUserId);
+        const savedProfile = localStorage.getItem(profileKey);
+        if (savedProfile) {
+          try {
+            this.currentUser = JSON.parse(savedProfile);
+            this.sessionToken = savedToken;
+          } catch {
+            this.currentUser = null;
+            this.sessionToken = null;
+          }
+        }
+      }
+
+      // Legacy fallback migration: if legacy single profile exists, migrate to account-specific key
+      if (!this.currentUser) {
+        const legacyProfile = localStorage.getItem('agrismart_user_profile');
+        if (legacyProfile && savedToken) {
+          try {
+            const parsed = JSON.parse(legacyProfile);
+            if (parsed?.email) {
+              const userId = getStableUserId(parsed.email, parsed.id);
+              parsed.id = userId;
+              this.currentUser = parsed;
+              this.sessionToken = savedToken;
+              localStorage.setItem(getUserProfileStorageKey(userId), JSON.stringify(parsed));
+              setActiveUserSession(userId, savedToken);
+              localStorage.removeItem('agrismart_user_profile');
+            }
+          } catch {
+            // ignore
+          }
         }
       }
     }
@@ -32,19 +65,22 @@ export class MockAuthService implements AuthService {
       throw new Error('Please provide an email or mobile phone number.');
     }
 
-    // Check if an existing profile is in localStorage
+    const userId = getStableUserId(credentials.email);
+    const profileKey = getUserProfileStorageKey(userId);
+
     let user: User;
-    const savedProfile = typeof window !== 'undefined' ? localStorage.getItem('agrismart_user_profile') : null;
+    const savedProfile = typeof window !== 'undefined' ? localStorage.getItem(profileKey) : null;
     if (savedProfile) {
       try {
         const parsed = JSON.parse(savedProfile);
         user = {
           ...parsed,
+          id: userId,
           email: credentials.email
         };
       } catch {
         user = {
-          id: `usr_${Date.now()}`,
+          id: userId,
           name: credentials.email.split('@')[0] || 'User',
           email: credentials.email,
           createdAt: new Date().toISOString()
@@ -52,7 +88,7 @@ export class MockAuthService implements AuthService {
       }
     } else {
       user = {
-        id: `usr_${Date.now()}`,
+        id: userId,
         name: credentials.email.split('@')[0] || 'User',
         email: credentials.email,
         createdAt: new Date().toISOString()
@@ -64,8 +100,8 @@ export class MockAuthService implements AuthService {
     this.sessionToken = token;
 
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('agrismart_user_profile', JSON.stringify(user));
-      localStorage.setItem('agrismart_token', token);
+      localStorage.setItem(profileKey, JSON.stringify(user));
+      setActiveUserSession(userId, token);
     }
 
     return {
@@ -78,8 +114,15 @@ export class MockAuthService implements AuthService {
   async register(data: RegisterData): Promise<AuthSession> {
     await new Promise((res) => setTimeout(res, 250));
 
+    if (!data.email) {
+      throw new Error('Please provide an email address.');
+    }
+
+    const userId = getStableUserId(data.email);
+    const profileKey = getUserProfileStorageKey(userId);
+
     const user: User = {
-      id: `usr_${Date.now()}`,
+      id: userId,
       name: data.name?.trim() || 'User',
       email: data.email,
       farmName: data.farmName?.trim() || undefined,
@@ -93,8 +136,8 @@ export class MockAuthService implements AuthService {
     this.sessionToken = token;
 
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('agrismart_user_profile', JSON.stringify(user));
-      localStorage.setItem('agrismart_token', token);
+      localStorage.setItem(profileKey, JSON.stringify(user));
+      setActiveUserSession(userId, token);
     }
 
     return {
@@ -105,18 +148,30 @@ export class MockAuthService implements AuthService {
   }
 
   async getCurrentUser(): Promise<User | null> {
-    return this.currentUser;
+    if (this.currentUser) return this.currentUser;
+
+    const activeUserId = getActiveUserId();
+    if (activeUserId && typeof window !== 'undefined' && window.localStorage) {
+      const profileKey = getUserProfileStorageKey(activeUserId);
+      const saved = localStorage.getItem(profileKey);
+      if (saved) {
+        try {
+          this.currentUser = JSON.parse(saved);
+          return this.currentUser;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   async logout(): Promise<void> {
     await new Promise((res) => setTimeout(res, 100));
     this.currentUser = null;
     this.sessionToken = null;
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.removeItem('agrismart_user_profile');
-      localStorage.removeItem('agrismart_token');
-      localStorage.removeItem('agrismart_mock_user');
-    }
+    // Clear ONLY active session state, leaving user profiles and histories intact
+    clearActiveUserSession();
   }
 
   isAuthenticated(): boolean {
