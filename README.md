@@ -1,3 +1,8 @@
+#Demo Video
+
+https://drive.google.com/file/d/1rD69aeKv41HphHIoAGsZrq1XuuVyTi7R/view?usp=sharing
+
+
 # 🌿 AgriSmart AI
 
 AgriSmart AI is an end-to-end crop disease diagnostic system. It allows farmers and agronomists to photograph or upload a leaf image to receive real-time disease identification, confidence scores, and actionable precautionary advice.
