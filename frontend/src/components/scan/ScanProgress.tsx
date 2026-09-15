@@ -14,7 +14,7 @@ export const ScanProgress: React.FC<ScanProgressProps> = ({ previewUrl }) => {
   const STAGES = [
     { label: t('scan.analyzingMessage'), duration: 500 },
     { label: t('scan.analyzingNotice'), duration: 600 },
-    { label: 'EfficientNet-B2 Model 1 Inference...', duration: 700 },
+    { label: 'EfficientNet-B2 Model 2 Inference...', duration: 700 },
     { label: t('result.recommendedActionsTitle'), duration: 400 }
   ];
 

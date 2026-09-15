@@ -1,11 +1,7 @@
 import { HistoryService } from './HistoryService';
 import { MockHistoryService } from './MockHistoryService';
-import { ApiHistoryService } from './ApiHistoryService';
 
-const useMock = import.meta.env.VITE_USE_MOCK_API !== 'false';
-
-export const historyService: HistoryService = useMock
-  ? new MockHistoryService()
-  : new ApiHistoryService();
+// Client-side persistent history service via localStorage
+export const historyService: HistoryService = new MockHistoryService();
 
 export * from './HistoryService';

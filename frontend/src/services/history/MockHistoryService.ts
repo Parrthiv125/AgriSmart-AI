@@ -1,16 +1,43 @@
 import { HistoryService } from './HistoryService';
 import { HistoryFilter, HistoryItem, HistoryStats } from '../../types/history';
-import { MOCK_HISTORY } from '../../data/mockData';
 
 export class MockHistoryService implements HistoryService {
   private historyItems: HistoryItem[] = [];
 
   constructor() {
-    this.historyItems = [...MOCK_HISTORY];
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const saved = localStorage.getItem('agrismart_scan_history');
+        if (saved) {
+          this.historyItems = JSON.parse(saved);
+          return;
+        }
+      }
+    } catch {
+      // ignore JSON parse errors
+    }
+    this.historyItems = [];
+  }
+
+  private saveToStorage(): void {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('agrismart_scan_history', JSON.stringify(this.historyItems));
+      }
+    } catch {
+      // ignore storage quota errors
+    }
   }
 
   async getHistory(filter?: HistoryFilter): Promise<HistoryItem[]> {
-    await new Promise((res) => setTimeout(res, 250));
+    await new Promise((res) => setTimeout(res, 100));
+
+    // Reload from storage to ensure sync across components
+    this.loadFromStorage();
 
     let results = [...this.historyItems];
 
@@ -45,12 +72,14 @@ export class MockHistoryService implements HistoryService {
   }
 
   async getHistoryItemById(id: string): Promise<HistoryItem | null> {
-    await new Promise((res) => setTimeout(res, 150));
+    await new Promise((res) => setTimeout(res, 50));
+    this.loadFromStorage();
     return this.historyItems.find((item) => item.id === id || item.predictionId === id) || null;
   }
 
   async getHistoryStats(): Promise<HistoryStats> {
-    await new Promise((res) => setTimeout(res, 100));
+    await new Promise((res) => setTimeout(res, 50));
+    this.loadFromStorage();
     const totalScans = this.historyItems.length;
     const healthyCount = this.historyItems.filter((i) => i.status === 'healthy').length;
     const diseasedCount = this.historyItems.filter((i) => i.status === 'diseased').length;
@@ -65,14 +94,23 @@ export class MockHistoryService implements HistoryService {
   }
 
   async deleteHistoryItem(id: string): Promise<boolean> {
-    await new Promise((res) => setTimeout(res, 200));
+    await new Promise((res) => setTimeout(res, 100));
+    this.loadFromStorage();
     const initialLen = this.historyItems.length;
     this.historyItems = this.historyItems.filter((item) => item.id !== id && item.predictionId !== id);
-    return this.historyItems.length < initialLen;
+    if (this.historyItems.length < initialLen) {
+      this.saveToStorage();
+      return true;
+    }
+    return false;
   }
 
   addHistoryItem(item: HistoryItem): void {
-    // Add to start of array
-    this.historyItems.unshift(item);
+    this.loadFromStorage();
+    // Avoid duplicate insertions
+    if (!this.historyItems.some((h) => h.id === item.id || h.predictionId === item.predictionId)) {
+      this.historyItems.unshift(item);
+      this.saveToStorage();
+    }
   }
 }

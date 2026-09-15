@@ -18,7 +18,7 @@ export const QuickScanCard: React.FC = () => {
       <div className="relative z-10 max-w-xl">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-600/60 backdrop-blur-xs text-emerald-100 text-xs font-bold border border-emerald-400/30 mb-4">
           <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
-          Model 1 Active • 28 Diseases Supported
+          Model 2 Active • Field Adapted
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-2 text-white">

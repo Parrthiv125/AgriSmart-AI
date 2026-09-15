@@ -16,12 +16,14 @@ export class MockDashboardService implements DashboardService {
     const healthyCount = stats.healthyCount;
     const diseasedCount = stats.diseasedCount;
     const totalScans = stats.totalScans;
-    const healthyPercentage = totalScans > 0 ? Math.round((healthyCount / totalScans) * 100) : 100;
+    const healthyPercentage = totalScans > 0 ? Math.round((healthyCount / totalScans) * 100) : 0;
 
-    // Aggregate crops
+    // Aggregate crops from real history scans
     const cropCountMap: Record<string, number> = {};
     history.forEach((item) => {
-      cropCountMap[item.crop] = (cropCountMap[item.crop] || 0) + 1;
+      if (item.crop) {
+        cropCountMap[item.crop] = (cropCountMap[item.crop] || 0) + 1;
+      }
     });
 
     const commonCrops = Object.entries(cropCountMap)
@@ -39,7 +41,7 @@ export class MockDashboardService implements DashboardService {
       },
       latestPrediction,
       recentScans: history.slice(0, 5),
-      commonCrops: commonCrops.length > 0 ? commonCrops : [{ crop: 'Tomato', count: 0 }]
+      commonCrops
     };
   }
 }

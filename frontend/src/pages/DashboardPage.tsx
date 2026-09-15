@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Camera,
   Activity,
@@ -23,6 +23,7 @@ import { useTranslation } from '../i18n';
 
 export const DashboardPage: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { t, getDisease } = useTranslation();
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -55,11 +56,12 @@ export const DashboardPage: React.FC = () => {
     diseasedCropsCount: 0,
     uncertainCount: 0,
     scansThisWeek: 0,
-    healthyPercentage: 100
+    healthyPercentage: 0
   };
 
   const recentScans = data?.recentScans || [];
   const latestPrediction = data?.latestPrediction;
+  const commonCropsCount = data?.commonCrops ? data.commonCrops.filter((c) => c.count > 0).length : 0;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
@@ -70,10 +72,10 @@ export const DashboardPage: React.FC = () => {
             {t('dashboard.growerOverview')}
           </span>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            {t('dashboard.welcomeBack')}, {user?.name || t('nav.farmer')}
+            {user?.name ? `${t('dashboard.welcomeBack')}, ${user.name}` : t('dashboard.welcomeBack')}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
-            {user?.farmName || 'Family Homestead Farm'} • {user?.location || 'Registered Farm'}
+            {user?.farmName || 'Farm not set'} • {user?.location || 'Location not set'}
           </p>
         </div>
 
@@ -119,7 +121,7 @@ export const DashboardPage: React.FC = () => {
         />
         <StatCard
           title={t('common.crop')}
-          value={data?.commonCrops.length || 1}
+          value={commonCropsCount}
           subtitle={t('dashboard.statUncertainScans')}
           icon={<Sprout className="w-5 h-5" />}
           accent="purple"
@@ -196,7 +198,7 @@ export const DashboardPage: React.FC = () => {
               title={t('dashboard.noScansYet')}
               message={t('dashboard.noScansDesc')}
               actionLabel={t('dashboard.firstScanBtn')}
-              onAction={() => {}}
+              onAction={() => navigate('/scan')}
             />
           )}
         </div>
@@ -273,7 +275,7 @@ export const DashboardPage: React.FC = () => {
                 message={t('dashboard.noScansDesc')}
                 actionLabel={t('dashboard.firstScanBtn')}
                 actionIcon={<Plus className="w-4 h-4" />}
-                onAction={() => {}}
+                onAction={() => navigate('/scan')}
               />
             </Card>
           )}

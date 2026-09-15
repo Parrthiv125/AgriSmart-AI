@@ -1,50 +1,72 @@
 import { AuthService } from './AuthService';
 import { AuthSession, LoginCredentials, RegisterData, User } from '../../types/auth';
-import { MOCK_CURRENT_USER } from '../../data/mockData';
 
 export class MockAuthService implements AuthService {
   private currentUser: User | null = null;
   private sessionToken: string | null = null;
 
   constructor() {
-    // Check if session exists in storage
-    const savedUser = localStorage.getItem('agrismart_mock_user');
-    const savedToken = localStorage.getItem('agrismart_token');
-    if (savedUser && savedToken) {
-      try {
-        this.currentUser = JSON.parse(savedUser);
-        this.sessionToken = savedToken;
-      } catch {
-        this.currentUser = null;
-        this.sessionToken = null;
+    // Purge any legacy mock user data
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('agrismart_mock_user');
+
+      // Check if real authenticated session exists in storage
+      const savedProfile = localStorage.getItem('agrismart_user_profile');
+      const savedToken = localStorage.getItem('agrismart_token');
+      if (savedProfile && savedToken) {
+        try {
+          this.currentUser = JSON.parse(savedProfile);
+          this.sessionToken = savedToken;
+        } catch {
+          this.currentUser = null;
+          this.sessionToken = null;
+        }
       }
-    } else {
-      // Default to logged-in demo farmer for zero-friction testing
-      this.currentUser = MOCK_CURRENT_USER;
-      this.sessionToken = 'mock_jwt_token_demo_farmer_2026';
-      localStorage.setItem('agrismart_mock_user', JSON.stringify(MOCK_CURRENT_USER));
-      localStorage.setItem('agrismart_token', this.sessionToken);
     }
   }
 
   async login(credentials: LoginCredentials): Promise<AuthSession> {
-    await new Promise((res) => setTimeout(res, 500)); // realistic short latency
+    await new Promise((res) => setTimeout(res, 200));
 
     if (!credentials.email) {
       throw new Error('Please provide an email or mobile phone number.');
     }
 
-    const user: User = {
-      ...MOCK_CURRENT_USER,
-      email: credentials.email,
-      name: credentials.email.includes('ramesh') ? 'Ramesh Patel' : credentials.email.split('@')[0] || 'Farmer Partner'
-    };
+    // Check if an existing profile is in localStorage
+    let user: User;
+    const savedProfile = typeof window !== 'undefined' ? localStorage.getItem('agrismart_user_profile') : null;
+    if (savedProfile) {
+      try {
+        const parsed = JSON.parse(savedProfile);
+        user = {
+          ...parsed,
+          email: credentials.email
+        };
+      } catch {
+        user = {
+          id: `usr_${Date.now()}`,
+          name: credentials.email.split('@')[0] || 'User',
+          email: credentials.email,
+          createdAt: new Date().toISOString()
+        };
+      }
+    } else {
+      user = {
+        id: `usr_${Date.now()}`,
+        name: credentials.email.split('@')[0] || 'User',
+        email: credentials.email,
+        createdAt: new Date().toISOString()
+      };
+    }
 
-    const token = `mock_jwt_${Date.now()}`;
+    const token = `jwt_${Date.now()}`;
     this.currentUser = user;
     this.sessionToken = token;
-    localStorage.setItem('agrismart_mock_user', JSON.stringify(user));
-    localStorage.setItem('agrismart_token', token);
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('agrismart_user_profile', JSON.stringify(user));
+      localStorage.setItem('agrismart_token', token);
+    }
 
     return {
       user,
@@ -54,23 +76,26 @@ export class MockAuthService implements AuthService {
   }
 
   async register(data: RegisterData): Promise<AuthSession> {
-    await new Promise((res) => setTimeout(res, 600));
+    await new Promise((res) => setTimeout(res, 250));
 
     const user: User = {
       id: `usr_${Date.now()}`,
-      name: data.name || 'Farmer Partner',
+      name: data.name?.trim() || 'User',
       email: data.email,
-      farmName: data.farmName || 'Family Homestead Farm',
-      location: data.location || 'Local Farm District',
-      crops: data.crops && data.crops.length > 0 ? data.crops : ['Tomato', 'Potato'],
+      farmName: data.farmName?.trim() || undefined,
+      location: data.location?.trim() || undefined,
+      crops: data.crops && data.crops.length > 0 ? data.crops : [],
       createdAt: new Date().toISOString()
     };
 
-    const token = `mock_jwt_${Date.now()}`;
+    const token = `jwt_${Date.now()}`;
     this.currentUser = user;
     this.sessionToken = token;
-    localStorage.setItem('agrismart_mock_user', JSON.stringify(user));
-    localStorage.setItem('agrismart_token', token);
+
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('agrismart_user_profile', JSON.stringify(user));
+      localStorage.setItem('agrismart_token', token);
+    }
 
     return {
       user,
@@ -84,11 +109,14 @@ export class MockAuthService implements AuthService {
   }
 
   async logout(): Promise<void> {
-    await new Promise((res) => setTimeout(res, 200));
+    await new Promise((res) => setTimeout(res, 100));
     this.currentUser = null;
     this.sessionToken = null;
-    localStorage.removeItem('agrismart_mock_user');
-    localStorage.removeItem('agrismart_token');
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('agrismart_user_profile');
+      localStorage.removeItem('agrismart_token');
+      localStorage.removeItem('agrismart_mock_user');
+    }
   }
 
   isAuthenticated(): boolean {

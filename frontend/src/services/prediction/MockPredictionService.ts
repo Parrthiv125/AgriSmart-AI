@@ -1,29 +1,22 @@
 import { PredictionService } from './PredictionService';
 import { PredictionResult, ConfidenceLevel } from '../../types/prediction';
-import { MOCK_PREDICTIONS } from '../../data/mockData';
+import { SAMPLE_IMAGES } from '../../data/mockData';
 import { DISEASE_CATALOG, ALL_DISEASE_CLASSES } from '../../data/diseaseCatalog';
 import { historyService } from '../history';
 
 export class MockPredictionService implements PredictionService {
   private predictions: Map<string, PredictionResult> = new Map();
 
-  constructor() {
-    // Seed initial mock predictions
-    Object.values(MOCK_PREDICTIONS).forEach((pred) => {
-      this.predictions.set(pred.predictionId, pred);
-    });
-  }
-
   async predict(imageFile: File | Blob, cropHint?: string): Promise<PredictionResult> {
-    // Realistic simulated ML inference delay (1800ms)
-    await new Promise((res) => setTimeout(res, 1800));
+    // Realistic simulated ML inference delay (1200ms)
+    await new Promise((res) => setTimeout(res, 1200));
 
     // Create object URL for the uploaded leaf image
     let previewUrl: string;
     try {
       previewUrl = URL.createObjectURL(imageFile);
     } catch {
-      previewUrl = MOCK_PREDICTIONS.pred_001.imageUrl;
+      previewUrl = SAMPLE_IMAGES.tomatoHealthy;
     }
 
     // Check if filename contains hint keywords for deterministic testing
@@ -101,7 +94,7 @@ export class MockPredictionService implements PredictionService {
             ]
       },
       createdAt: new Date().toISOString(),
-      modelName: 'EfficientNet-B2 Model 1'
+      modelName: 'EfficientNet-B2 Model 2 (Field-Adapted)'
     };
 
     // Store in memory
@@ -120,7 +113,7 @@ export class MockPredictionService implements PredictionService {
         status: disease.isHealthy ? 'healthy' : confidenceLevel === 'low' ? 'uncertain' : 'diseased',
         imageUrl: previewUrl,
         createdAt: prediction.createdAt,
-        notes: `Analyzed via Model 1`
+        notes: `Analyzed via Model 2 (Field-Adapted)`
       });
     } catch {
       // ignore history tracking errors
@@ -130,7 +123,7 @@ export class MockPredictionService implements PredictionService {
   }
 
   async getPredictionById(predictionId: string): Promise<PredictionResult | null> {
-    await new Promise((res) => setTimeout(res, 200));
+    await new Promise((res) => setTimeout(res, 100));
     return this.predictions.get(predictionId) || null;
   }
 }

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Sprout, LogIn, Sparkles, AlertCircle } from 'lucide-react';
+import { Sprout, LogIn, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { useToast } from '../context/ToastContext';
@@ -40,20 +40,6 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setIsSubmitting(true);
-    setErrorMessage(null);
-    try {
-      await login({ email: 'ramesh.farmer@agrismart.ai' });
-      showToast(t('auth.demoSuccessToast'), 'success');
-      navigate(from, { replace: true });
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Demo login failed.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
       <div className="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl p-6 sm:p-8">
@@ -66,24 +52,6 @@ export const LoginPage: React.FC = () => {
           <p className="mt-1 text-xs sm:text-sm text-slate-500">
             {t('auth.signInSubtitle')}
           </p>
-        </div>
-
-        {/* 1-Click Demo Login Banner */}
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-center">
-          <p className="text-xs font-semibold text-emerald-900 mb-2">
-            {t('auth.demoBanner')}
-          </p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={handleDemoLogin}
-            isLoading={isSubmitting}
-            icon={<Sparkles className="w-4 h-4 text-emerald-600" />}
-            className="w-full font-bold bg-white hover:bg-emerald-100/50 text-emerald-800 border-emerald-300"
-          >
-            {t('auth.demoLoginBtn')}
-          </Button>
         </div>
 
         {/* Error Alert */}
@@ -116,7 +84,6 @@ export const LoginPage: React.FC = () => {
               <label htmlFor="password" className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
                 {t('auth.password')}
               </label>
-              <span className="text-[11px] text-slate-400">Mock demo mode</span>
             </div>
             <input
               id="password"

@@ -18,7 +18,7 @@ export const RegisterPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [farmName, setFarmName] = useState('');
   const [location, setLocation] = useState('');
-  const [selectedCrops, setSelectedCrops] = useState<string[]>(['Tomato']);
+  const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,10 +42,10 @@ export const RegisterPage: React.FC = () => {
     setErrorMessage(null);
     try {
       await register({
-        name,
-        email,
-        farmName: farmName || 'Family Farm',
-        location: location || 'Agricultural Region',
+        name: name.trim(),
+        email: email.trim(),
+        farmName: farmName.trim() ? farmName.trim() : undefined,
+        location: location.trim() ? location.trim() : undefined,
         crops: selectedCrops,
         password
       });

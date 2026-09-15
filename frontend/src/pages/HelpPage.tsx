@@ -43,7 +43,7 @@ export const HelpPage: React.FC = () => {
   const faqs = [
     {
       q: 'How does AgriSmart AI detect crop diseases?',
-      a: 'AgriSmart AI utilizes Model 1, a specialized computer vision neural network architecture (EfficientNet-B2). It is trained on tens of thousands of verified leaf images across 28 distinct agricultural disease and healthy crop categories. It analyzes lesion shapes, concentric rings, chlorosis patterns, and fungal pustules.'
+      a: 'AgriSmart AI utilizes Model 2 (Field-Adapted), a specialized computer vision neural network architecture (EfficientNet-B2). It is trained on tens of thousands of verified leaf images across 28 distinct agricultural disease and healthy crop categories. It analyzes lesion shapes, concentric rings, chlorosis patterns, and fungal pustules.'
     },
     {
       q: 'What does the Confidence Percentage mean?',
